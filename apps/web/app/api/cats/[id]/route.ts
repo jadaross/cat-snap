@@ -36,7 +36,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     .from("cats")
     .select("created_by")
     .eq("id", id)
-    .single();
+    .single() as unknown as { data: { created_by: string | null } | null; error: unknown };
 
   if (!existing || existing.created_by !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
