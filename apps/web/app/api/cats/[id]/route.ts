@@ -36,15 +36,13 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     .from("cats")
     .select("created_by")
     .eq("id", id)
-    .single() as unknown as { data: { created_by: string | null } | null; error: unknown };
+    .single();
 
   if (!existing || existing.created_by !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Cast to bypass Supabase client type inference resolving update to never
-  const db = supabase as any;
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from("cats")
     .update({
       name: body.name,
