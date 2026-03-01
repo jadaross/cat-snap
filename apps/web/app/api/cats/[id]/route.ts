@@ -50,8 +50,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       primary_photo_url: body.primary_photo_url,
       is_tnr: body.is_tnr,
       has_caretaker: body.has_caretaker,
-      updated_at: new Date().toISOString(),
-    })
+    } as any)
     .eq("id", id)
     .select()
     .single();
