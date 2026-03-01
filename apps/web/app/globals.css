@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Mapbox GL CSS — required for map to render correctly */
+@import "mapbox-gl/dist/mapbox-gl.css";
+
+@layer base {
+  html {
+    /* Prevent layout shift when scrollbar appears */
+    scrollbar-gutter: stable;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer utilities {
+  /* Full-height map containers */
+  .map-container {
+    height: calc(100vh - 4rem); /* subtract nav height */
+    width: 100%;
+  }
+
+  /* Card hover lift */
+  .card-lift {
+    @apply transition-transform duration-150 ease-out hover:-translate-y-0.5 hover:shadow-md;
+  }
+}
