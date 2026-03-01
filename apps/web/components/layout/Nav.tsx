@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { Avatar } from "@/components/ui/Avatar";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -17,6 +18,18 @@ export function Nav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    const supabase = createClient();
+    supabase
+      .from("users")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => setIsAdmin(data?.is_admin === true));
+  }, [user]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -53,6 +66,20 @@ export function Nav() {
                 {label}
               </Link>
             ))}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={clsx(
+                  "flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                  pathname.startsWith("/admin")
+                    ? "bg-amber-50 text-amber-700"
+                    : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+                )}
+              >
+                <ShieldIcon className="h-4 w-4" />
+                Admin
+              </Link>
+            )}
           </nav>
 
           {/* Auth area */}
@@ -150,6 +177,14 @@ function PlusIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+    </svg>
+  );
+}
+
+function ShieldIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   );
 }

@@ -20,7 +20,10 @@ export default async function CatPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: cat }, { data: sightings }, { data: follows }, { data: authData }] =
+  const { data: authData } = await supabase.auth.getUser();
+  const currentUserId = authData?.user?.id;
+
+  const [{ data: cat }, { data: sightings }, { data: follows }, { data: userProfile }] =
     await Promise.all([
       supabase.from("cats").select("*").eq("id", id).single(),
       supabase
@@ -30,7 +33,9 @@ export default async function CatPage({ params }: Props) {
         .eq("visibility", "public")
         .order("seen_at", { ascending: false }),
       supabase.from("cat_follows").select("user_id", { count: "exact" }).eq("cat_id", id),
-      supabase.auth.getUser(),
+      currentUserId
+        ? supabase.from("users").select("is_admin").eq("id", currentUserId).single()
+        : Promise.resolve({ data: null }),
     ]);
 
   if (!cat) notFound();
@@ -40,7 +45,8 @@ export default async function CatPage({ params }: Props) {
       cat={cat}
       sightings={(sightings ?? []) as Parameters<typeof CatProfile>[0]["sightings"]}
       followerCount={follows?.length ?? 0}
-      currentUserId={authData?.user?.id}
+      currentUserId={currentUserId}
+      isAdmin={userProfile?.is_admin === true}
     />
   );
 }

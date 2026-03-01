@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { CatRow, SightingRow, UserRow } from "@/lib/supabase/types";
+import { DeleteCatButton } from "./DeleteCatButton";
 
 type SightingWithUser = SightingRow & {
   users: Pick<UserRow, "username" | "display_name" | "avatar_url"> | null;
@@ -11,6 +12,7 @@ interface CatProfileProps {
   sightings: SightingWithUser[];
   followerCount?: number;
   currentUserId?: string;
+  isAdmin?: boolean;
 }
 
 function timeAgo(isoDate: string): string {
@@ -23,7 +25,7 @@ function timeAgo(isoDate: string): string {
   return `${Math.floor(days / 365)} years ago`;
 }
 
-export function CatProfile({ cat, sightings, followerCount = 0 }: CatProfileProps) {
+export function CatProfile({ cat, sightings, followerCount = 0, isAdmin }: CatProfileProps) {
   const lastSighting = sightings[0];
   const uniqueSpotters = new Set(sightings.map((s) => s.user_id)).size;
 
@@ -75,6 +77,13 @@ export function CatProfile({ cat, sightings, followerCount = 0 }: CatProfileProp
           </div>
         </div>
       </div>
+
+      {/* Admin delete */}
+      {isAdmin && (
+        <div className="flex justify-end">
+          <DeleteCatButton catId={cat.id} catName={cat.name} />
+        </div>
+      )}
 
       {/* Check-in CTA */}
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-center justify-between gap-4">

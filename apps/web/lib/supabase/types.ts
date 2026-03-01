@@ -20,6 +20,7 @@ export interface Database {
           avatar_url: string | null;
           bio: string | null;
           city: string | null;
+          is_admin: boolean;
           created_at: string;
         };
         Insert: Omit<Database["public"]["Tables"]["users"]["Row"], "created_at">;
@@ -117,6 +118,24 @@ export interface Database {
         >;
         Update: Partial<Pick<Database["public"]["Tables"]["comments"]["Row"], "body">>;
       };
+      merge_requests: {
+        Row: {
+          id: string;
+          submitted_by: string;
+          sighting_ids: string[];
+          note: string | null;
+          status: "pending" | "approved" | "rejected";
+          reviewed_by: string | null;
+          target_cat_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["merge_requests"]["Row"],
+          "id" | "created_at" | "updated_at"
+        >;
+        Update: Partial<Database["public"]["Tables"]["merge_requests"]["Insert"]>;
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -131,3 +150,4 @@ export type SightingRow = Database["public"]["Tables"]["sightings"]["Row"];
 export type FriendshipRow = Database["public"]["Tables"]["friendships"]["Row"];
 export type ReactionRow = Database["public"]["Tables"]["reactions"]["Row"];
 export type CommentRow = Database["public"]["Tables"]["comments"]["Row"];
+export type MergeRequestRow = Database["public"]["Tables"]["merge_requests"]["Row"];

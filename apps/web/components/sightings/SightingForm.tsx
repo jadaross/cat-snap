@@ -19,9 +19,16 @@ const CAT_TAG_SUGGESTIONS = [
 
 type Step = "photo" | "cat" | "details" | "submitting";
 
-export function SightingForm() {
+interface SightingFormProps {
+  initialLat?: number;
+  initialLng?: number;
+}
+
+export function SightingForm({ initialLat, initialLng }: SightingFormProps) {
   const router = useRouter();
-  const { lat, lng } = useLocation();
+  const { lat: gpsLat, lng: gpsLng } = useLocation();
+  const lat = initialLat ?? gpsLat;
+  const lng = initialLng ?? gpsLng;
 
   // Step state
   const [step, setStep] = useState<Step>("photo");
@@ -61,7 +68,11 @@ export function SightingForm() {
 
   async function handleSubmit() {
     if (lat == null || lng == null) {
-      setSubmitError("GPS location is required. Please allow location access and try again.");
+      setSubmitError(
+        initialLat != null || initialLng != null
+          ? "Pinned location is invalid. Please go back to the map and try again."
+          : "GPS location is required. Please allow location access and try again."
+      );
       return;
     }
     setStep("submitting");
@@ -210,7 +221,13 @@ export function SightingForm() {
             placeholder="e.g. Near the coffee shop on Main St"
             value={locationLabel}
             onChange={(e) => setLocationLabel(e.target.value)}
-            hint={lat != null ? `GPS location captured (${lat.toFixed(4)}, ${lng?.toFixed(4)})` : "GPS unavailable — consider adding a description"}
+            hint={
+              initialLat != null
+                ? `Location pinned from map (${initialLat.toFixed(4)}, ${initialLng?.toFixed(4)})`
+                : lat != null
+                  ? `GPS location captured (${lat.toFixed(4)}, ${lng?.toFixed(4)})`
+                  : "GPS unavailable — consider adding a description"
+            }
           />
           <div className="space-y-1">
             <label className="text-sm font-medium text-stone-700">Who can see this?</label>
