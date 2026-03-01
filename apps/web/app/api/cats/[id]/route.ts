@@ -42,7 +42,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { data, error } = await supabase
+  // Cast to bypass Supabase client type inference resolving update to never
+  const db = supabase as any;
+  const { data, error } = await db
     .from("cats")
     .update({
       name: body.name,
@@ -50,7 +52,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       primary_photo_url: body.primary_photo_url,
       is_tnr: body.is_tnr,
       has_caretaker: body.has_caretaker,
-    } as any)
+    })
     .eq("id", id)
     .select()
     .single();

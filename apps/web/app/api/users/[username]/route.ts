@@ -41,7 +41,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
 
   const body = await request.json();
-  const { data, error } = await supabase
+  const db = supabase as any;
+  const { data, error } = await db
     .from("users")
     .update({
       display_name: body.display_name,

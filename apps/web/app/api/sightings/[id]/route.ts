@@ -42,7 +42,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { data, error } = await supabase
+  const db = supabase as any;
+  const { data, error } = await db
     .from("sightings")
     .update({ notes: body.notes, visibility: body.visibility })
     .eq("id", id)
