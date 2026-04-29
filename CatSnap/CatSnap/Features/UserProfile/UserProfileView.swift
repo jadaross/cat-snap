@@ -1,22 +1,45 @@
 import SwiftUI
 
-// You-tab profile redesigned to match `CatSnap App.html` lines 1004–1099:
-// coral header with stats, 4-column awards grid, ink streak card, then
-// the user's recent sightings grid. Friends section deferred to v2.
+// You-tab profile, mirroring `CatSnap App.html` lines 1004–1154: coral
+// header with stats, 4-column awards grid, ink streak card, friends
+// section (avatar row + Add button + recent activity), then the user's
+// own sightings grid.
 struct UserProfileView: View {
     @Environment(AuthSession.self) private var session
     @State private var model = UserProfileModel()
+    @State private var friendsModel = FriendsModel()
     @State private var isEditPresented = false
+    @State private var path = NavigationPath()
+
+    enum Route: Hashable {
+        case addFriends
+        case friendsActivity
+    }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack(alignment: .top) {
                 Color.cream.ignoresSafeArea()
                 content
             }
             .toolbar(.hidden, for: .navigationBar)
             .ignoresSafeArea(edges: .top)
-            .task { await model.load() }
+            .navigationDestination(for: Route.self) { route in
+                switch route {
+                case .addFriends:
+                    AddFriendsView()
+                case .friendsActivity:
+                    FriendsActivityView()
+                }
+            }
+            .navigationDestination(for: UUID.self) { catId in
+                CatProfileView(catId: catId)
+            }
+            .task {
+                await model.load()
+                await friendsModel.loadFriends()
+                await friendsModel.loadActivity(limit: 6)
+            }
         }
     }
 
@@ -68,6 +91,9 @@ struct UserProfileView: View {
                 streakCard(streak: streak, sightings: sightings)
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
+
+                friendsSection
+                    .padding(.top, 18)
 
                 mySightingsSection(sightings: sightings)
                     .padding(.top, 16)
@@ -262,6 +288,139 @@ struct UserProfileView: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.ink, in: .rect(cornerRadius: 16))
+    }
+
+    // MARK: - Friends section (CatSnap App.html lines 1101–1154)
+
+    private var friendsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Button {
+                    path.append(Route.friendsActivity)
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("friends")
+                            .font(.Brand.frauncesBlackItalic(size: 22))
+                            .tracking(-0.6)
+                            .foregroundStyle(Color.ink)
+                        Text("· \(friendsModel.friends.count)")
+                            .font(.Brand.mono(size: 11))
+                            .tracking(0.8)
+                            .foregroundStyle(Color.stone)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .heavy))
+                            .foregroundStyle(Color.stone)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Button { path.append(Route.addFriends) } label: {
+                    HStack(spacing: 4) {
+                        Text("+").font(.system(size: 14, weight: .light))
+                        Text("Add").font(.Brand.jakarta(.bold, size: 12))
+                    }
+                    .foregroundStyle(Color.creamSoft)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.coral, in: .capsule)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if friendsModel.friends.isEmpty {
+                emptyFriendsCard
+            } else {
+                friendsAvatarRow
+                recentFriendActivity
+            }
+        }
+        .padding(.horizontal, 16)
+    }
+
+    private var friendsAvatarRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(friendsModel.friends) { friend in
+                    VStack(spacing: 4) {
+                        ZStack {
+                            Color.creamDeep
+                            if let url = friend.avatarUrl {
+                                AsyncCatImage(url: url)
+                            } else {
+                                CatWindowMark(size: 44, showSill: false)
+                            }
+                        }
+                        .frame(width: 56, height: 56)
+                        .clipShape(.rect(cornerRadius: 14))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.creamSoft, lineWidth: 2))
+
+                        Text(friend.displayName ?? friend.username)
+                            .font(.Brand.jakarta(.bold, size: 11))
+                            .foregroundStyle(Color.ink)
+                            .lineLimit(1)
+                            .frame(maxWidth: 64)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var recentFriendActivity: some View {
+        if !friendsModel.activity.isEmpty {
+            HStack {
+                Text("RECENT")
+                    .font(.Brand.mono(size: 10))
+                    .tracking(1.2)
+                    .foregroundStyle(Color.stone)
+                Spacer()
+                Button { path.append(Route.friendsActivity) } label: {
+                    HStack(spacing: 2) {
+                        Text("See all").font(.Brand.jakarta(.bold, size: 11))
+                        Text("›").font(.system(size: 12))
+                    }
+                    .foregroundStyle(Color.coralDeep)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, 4)
+
+            VStack(spacing: 8) {
+                ForEach(friendsModel.activity.prefix(2)) { sighting in
+                    FriendActivityRow(sighting: sighting) {
+                        if let id = sighting.catId { path.append(id) }
+                    }
+                }
+            }
+        }
+    }
+
+    private var emptyFriendsCard: some View {
+        Button { path.append(Route.addFriends) } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "person.2")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Color.stone)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("no friends yet")
+                        .font(.Brand.jakarta(.bold, size: 13))
+                        .foregroundStyle(Color.ink)
+                    Text("follow other spotters to see their cats here.")
+                        .font(.Brand.jakarta(.regular, size: 11))
+                        .foregroundStyle(Color.stone)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundStyle(Color.stone)
+            }
+            .padding(12)
+            .background(Color.creamSoft, in: .rect(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.stoneLight, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - My sightings (kept while Phase 8 friends feed is deferred)

@@ -52,11 +52,12 @@ The canonical roadmap is `docs/ios-rebuild.md`. Phase 2 (auth + first round-trip
 
 ## Schema and RLS
 
-- v1 migrations are applied to the live project. Tables: `profiles`, `cats`, `sightings`, `sighting_tags`. RLS is on; anon reads everywhere, writes require `auth.uid()`.
+- v1 migrations are applied to the live project. Tables: `profiles`, `cats`, `sightings`, `sighting_tags`, `follows`. RLS is on; anon reads everywhere, writes require `auth.uid()`.
 - `cats.rarity` is constrained to `('common','uncommon','rare','legendary')` — match this in `Cat.Rarity` if changing.
 - A trigger auto-creates a profile row when `auth.users` gets a new entry; don't insert into `profiles` directly from the client.
 - Storage buckets `sighting-photos` and `avatars` are public-read, authenticated-write only.
-- Features deferred to v2 (don't add tables for these without checking): friendships, follows, reactions, comments, merge_requests, badges, streaks, sighting visibility flags.
+- Friends ships as a one-way follow graph: `public.follows` + the `friend_activity` / `my_friends` / `search_profiles` RPCs. Don't fork into an alternate model without checking.
+- Features still deferred (don't add tables for these without checking): reactions, comments, merge_requests, real `badges`/`streaks` (UI uses locally-computed awards + streak today), sighting visibility flags.
 
 ## Things commonly mistaken
 

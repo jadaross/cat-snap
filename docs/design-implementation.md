@@ -138,14 +138,28 @@ on its own.
       in {today, yesterday} so it survives mornings before the user logs
       a sighting
 
-## Phase 8 — Friends (screens 11 + 12) · DEFERRED to v2
+## Phase 8 — Friends (screens 11 + 12)
 
-Per `docs/ios-rebuild.md`: friend system, follows, comments, reactions are not
-in v1 scope. Track here so the design isn't lost.
-
-- [ ] Friends activity feed (photo cards, achievement cards, "I see them too")
-- [ ] Add friends (search, scan QR, share invite, suggested spotters)
-- [ ] Schema additions: `friendships`, follow graph, activity events
+- [x] Schema: `public.follows` (one-way follow graph) + RLS so only the
+      follower can insert/delete; anon read for follower counts
+- [x] RPCs: `friend_activity(p_limit)`, `my_friends()`,
+      `search_profiles(p_query, p_limit)` — all `security invoker` with
+      pinned `search_path`
+- [x] iOS API: `FriendsModel` with `follow / unfollow / loadFriends /
+      loadActivity / search`
+- [x] AddFriendsView: debounced username search, +Add / ✓ Following
+      capsule on each row, QR + Share-invite tiles as visual stubs
+- [x] You profile gains a Friends section: avatar row + `+ Add` pill,
+      RECENT activity preview (top 2), tap section header → Friends
+      activity feed
+- [x] FriendsActivityView: full chronological feed of friends'
+      sightings, photo cards push to CatProfileView
+- [ ] (Follow-up) Friend stories `live` indicator — needs a presence
+      signal (e.g. last-snap-within-N-min) on the API side
+- [ ] (Follow-up) "I see them too" reaction button on each card —
+      needs a reactions table
+- [ ] (Follow-up) Scan QR + Share invite — needs a Universal Link
+      entitlement and a Vision-camera flow respectively
 
 ---
 
