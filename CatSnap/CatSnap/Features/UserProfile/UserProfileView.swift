@@ -314,8 +314,19 @@ struct UserProfileView: View {
         let cal = Calendar.current
         let activeDays = Set(sightings.map { cal.startOfDay(for: $0.seenAt) })
         let today = cal.startOfDay(for: Date())
+
+        // Anchor the count on the most recent active day in {today, yesterday}
+        // so the streak doesn't reset to zero the moment the calendar flips
+        // before the user has logged a sighting today.
+        var endDay = today
+        if !activeDays.contains(endDay) {
+            guard let yesterday = cal.date(byAdding: .day, value: -1, to: today),
+                  activeDays.contains(yesterday) else { return 0 }
+            endDay = yesterday
+        }
+
         var streak = 0
-        var day = today
+        var day = endDay
         while activeDays.contains(day) {
             streak += 1
             guard let prev = cal.date(byAdding: .day, value: -1, to: day) else { break }

@@ -66,7 +66,7 @@ For rarity badges/tags. Source: `catsnap-data.jsx` `RARITY` constant.
 | Role | Font | Source | Notes |
 |------|------|--------|-------|
 | UI / body | **Plus Jakarta Sans** (400–800) | Google Fonts | Default for all interface text |
-| Display / serif | **Fraunces** (italic 900) | Google Fonts | Wordmark and headline moments only |
+| Display / serif | **Fraunces** (italic 900) | Google Fonts | Wordmark, the floating tab-bar Snap button label, and headline moments only |
 | Mono accents | **JetBrains Mono** (400–700) | Google Fonts | Small labels, metadata, system v1 stamps |
 
 In SwiftUI (Phase 2), these will load via `Font.custom` from the bundled `.ttf` files. Drop the Google Fonts files into `Resources/Fonts/` and register in `Info.plist`'s `UIAppFonts`.

@@ -30,7 +30,8 @@ on its own.
 - [x] Custom glyphs (`ExploreGlyph`, `ProfileGlyph`, `CameraGlyph`)
 - [x] `MainTabView` rewrite (ZStack + fullScreenCover preserved)
 - [ ] (Follow-up) Bundle `PlusJakartaSans-ExtraBold` for true 800-weight tab labels
-- [ ] (Follow-up) Update `docs/brand.md` to sanction Fraunces on the snap button
+- [x] (Follow-up) `docs/brand.md` updated to sanction Fraunces on the
+      floating Snap button label
 
 ## Phase 2 — Explore (screens 01 + 02)
 
@@ -133,9 +134,9 @@ on its own.
 - [x] `my sightings` grid kept until friends activity feed lands
 - [ ] (Follow-up) Friends section header + `+ Add` row — wired in
       Phase 8 (v2)
-- [ ] (Follow-up) Surface a stable streak count when there are zero
-      sightings today but a recent streak yesterday (currently resets
-      the moment today turns over)
+- [x] (Follow-up) Streak is now anchored to the most recent active day
+      in {today, yesterday} so it survives mornings before the user logs
+      a sighting
 
 ## Phase 8 — Friends (screens 11 + 12) · DEFERRED to v2
 
