@@ -1,81 +1,31 @@
-# Cat Snap
+# Cat-Snap
 
-> A community-driven map for discovering and tracking street cats in your city.
+> A community-driven map for spotting and tracking street cats. Native iOS, in pre-build.
 
-Spot a street cat? Snap a photo, drop a pin, and share the sighting with your community. Cat Snap lets neighborhoods build a living map of their local feline residents — complete with cat profiles, sighting histories, and a social feed so you can keep up with what your friends are finding.
+**spot every cat.**
 
-## What It Does
+## Status
 
-- **Snap & Tag** — Take or upload a photo of a cat, drop a map pin at the location, and submit a sighting in seconds.
-- **Cat Profiles** — Sightings of the same cat are linked together to build a profile: last seen location, photo gallery, description, nicknames, and sighting history.
-- **Neighborhood Map** — An interactive map showing recent cat sightings near you. Filter by date, area, or specific cats.
-- **Social Feed** — Follow friends and see what cats they've spotted around town. React and comment on sightings.
-- **Cat Check-In** — Mark a cat as recently seen to let other community members know it's still around and healthy.
-- **Cat Status** — Community-sourced notes like whether a cat is being fed, is TNR'd, has a known caretaker, or is shy vs. friendly.
+This repo is the planning + spec home for the Cat-Snap iOS app. The original Next.js web app has been retired (preserved at git tag `v1.0.2-web-final`); the iOS rebuild is in Phase 1 (foundations, pre-Xcode).
 
-## Roadmap
+When the Xcode project starts (Phase 2), it'll either live in this repo at the root, or in a fresh repo named after the rebrand — TBD.
 
-See [`docs/features.md`](docs/features.md) for the full phased feature plan.
+## Where things are
 
-| Phase | Focus |
-|-------|-------|
-| MVP | Map + photo upload + cat profiles |
-| v2 | Social features (friends, feed, reactions) |
-| v3 | Cat recognition / duplicate linking, notifications |
-| iOS | Native iOS app using the same backend API |
+- **The plan** → [`docs/ios-rebuild.md`](docs/ios-rebuild.md)
+- **Brand** → [`docs/brand.md`](docs/brand.md) (palette, typography, mark)
+- **Design system** → [`docs/design-reference.md`](docs/design-reference.md) (points to external folder)
+- **Schema for new Supabase project** → [`docs/new-schema.sql`](docs/new-schema.sql)
+- **Product feature spec** → [`docs/features.md`](docs/features.md)
+- **Roadmap / future** → [`docs/future-upgrades.md`](docs/future-upgrades.md)
+- **Competitive landscape** → [`docs/competitive-analysis.md`](docs/competitive-analysis.md)
 
-## Tech Stack
+## Tech stack (locked)
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 14 (App Router), TypeScript, Tailwind CSS |
-| Maps | Mapbox GL JS |
-| Backend | Next.js API Routes |
-| Database | Supabase (PostgreSQL + PostGIS) |
-| Auth | Supabase Auth |
-| Storage | Supabase Storage |
-| Deployment | Vercel |
-
-See [`docs/architecture.md`](docs/architecture.md) for the full architecture breakdown.
-
-## Getting Started
-
-```bash
-# Install dependencies
-npm install
-
-# Set up environment variables
-cp .env.example .env.local
-# Fill in your Supabase and Mapbox keys
-
-# Run the dev server
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-## Project Structure
-
-```
-cat-snap/
-├── apps/
-│   └── web/              # Next.js web application
-│       ├── app/          # App Router pages & layouts
-│       ├── components/   # Reusable UI components
-│       ├── lib/          # Utilities, API clients, hooks
-│       └── public/       # Static assets
-├── docs/                 # Planning and architecture docs
-│   ├── architecture.md
-│   ├── features.md
-│   ├── database-schema.md
-│   └── competitive-analysis.md
-└── README.md
-```
-
-## Competitive Landscape
-
-See [`docs/competitive-analysis.md`](docs/competitive-analysis.md) for a breakdown of existing apps in this space and how Cat Snap differentiates.
-
-## Contributing
-
-This project is in early planning/development. See [`docs/features.md`](docs/features.md) for what's coming next.
+| Layer | Choice |
+|-------|--------|
+| App framework | SwiftUI (iOS 17+) |
+| Backend | Supabase (Postgres + PostGIS + Auth + Storage) |
+| Auth | Supabase Auth + Sign in with Apple |
+| Maps | Apple MapKit |
+| AI matching (v3) | On-device Vision feature prints + pgvector |
