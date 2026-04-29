@@ -34,10 +34,11 @@ on its own.
 
 ## Phase 2 — Explore (screens 01 + 02)
 
-- [ ] `SpotsHeader`: map/list pill toggle (`Map` / `Guide`) + location search pill
-- [ ] List/guide view: progress bar (`23 / 60 · E. LONDON`), filter chips
+- [x] `SpotsHeader`: map/list pill toggle (`Map` / `Guide`) + location search pill
+- [x] `ExploreView` wrapper that owns the toggle state and swaps MapView ↔ GuideListView
+- [ ] `GuideListView` body: progress bar (`23 / 60 · E. LONDON`), filter chips
       (All / ★ Legends / Rare / Today / Missing), 3-col grid with locked `?`
-      silhouettes for unspotted cats
+      silhouettes for unspotted cats (currently a placeholder)
 - [ ] Live ticker chip on map view (`Marmalade just spotted · 60m away`)
 - [ ] Bottom card peek with horizontal "nearby cats" rail
 - [x] `PhotoPin` redesign: teardrop tail + ring + circular cat photo

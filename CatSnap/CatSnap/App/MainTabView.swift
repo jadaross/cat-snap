@@ -10,7 +10,7 @@ struct MainTabView: View {
         ZStack(alignment: .bottom) {
             Group {
                 switch selectedTab {
-                case .explore: MapView()
+                case .explore: ExploreView()
                 case .you:     UserProfileView()
                 }
             }

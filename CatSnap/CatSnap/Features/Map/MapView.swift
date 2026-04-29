@@ -75,6 +75,7 @@ enum TimeFilter: String, CaseIterable, Hashable {
 }
 
 struct MapView: View {
+    @Binding var exploreView: ExploreSubview
     @State private var model = MapModel()
     @State private var locationManager = LocationManager()
     @State private var selectedSighting: NearbySighting?
@@ -163,15 +164,16 @@ struct MapView: View {
                     .frame(maxHeight: .infinity, alignment: .top)
             }
 
-            // Top-leading filter pills + top-trailing recentre button.
-            VStack {
+            // Top header (Map / Guide toggle + location pill) and recentre button.
+            VStack(spacing: 8) {
+                SpotsHeader(view: $exploreView)
+                    .padding(.top, 8)
                 HStack {
                     timeFilterRow
                     Spacer()
                     recenterButton
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 8)
                 Spacer()
             }
         }

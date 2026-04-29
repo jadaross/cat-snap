@@ -56,6 +56,42 @@ struct ProfileGlyph: Shape {
     }
 }
 
+// Bookmark/journal-corner icon used by the Explore tab's "Guide" toggle button
+// (`CatSnap App.html:248`). Squared shape with a single rounded corner top-right
+// and a fold curving in from the bottom-left.
+struct GuideGlyph: Shape {
+    func path(in rect: CGRect) -> Path {
+        let scale = min(rect.width, rect.height) / 24
+        var path = Path()
+
+        // Outline: M4 4 h12 a4 4 0 014 4 v12 H8 a4 4 0 01-4-4 V4 z
+        path.move(to: CGPoint(x: 4, y: 4))
+        path.addLine(to: CGPoint(x: 16, y: 4))
+        path.addArc(
+            center: CGPoint(x: 16, y: 8), radius: 4,
+            startAngle: .degrees(-90), endAngle: .degrees(0), clockwise: false
+        )
+        path.addLine(to: CGPoint(x: 20, y: 20))
+        path.addLine(to: CGPoint(x: 8, y: 20))
+        path.addArc(
+            center: CGPoint(x: 8, y: 16), radius: 4,
+            startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false
+        )
+        path.addLine(to: CGPoint(x: 4, y: 4))
+        path.closeSubpath()
+
+        // Inner fold: M4 16 a4 4 0 014-4 h12
+        path.move(to: CGPoint(x: 4, y: 16))
+        path.addArc(
+            center: CGPoint(x: 8, y: 16), radius: 4,
+            startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false
+        )
+        path.addLine(to: CGPoint(x: 20, y: 12))
+
+        return path.applying(CGAffineTransform(scaleX: scale, y: scale))
+    }
+}
+
 struct CameraGlyph: Shape {
     func path(in rect: CGRect) -> Path {
         let scale = min(rect.width, rect.height) / 24
