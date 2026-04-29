@@ -145,6 +145,11 @@ struct MapView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 96)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
+            } else if !filteredSightings.isEmpty {
+                NearbyCatsCard(sightings: filteredSightings) { sighting in
+                    focus(on: sighting)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
             // Empty-state card. Shown when nothing matched the filter.

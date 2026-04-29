@@ -41,7 +41,9 @@ on its own.
       silhouettes for unspotted cats (currently a placeholder)
 - [x] Live ticker chip on map view: shows the most recent sighting in the
       last hour, pulse dot, tap to centre + select on the map
-- [ ] Bottom card peek with horizontal "nearby cats" rail
+- [x] Bottom card peek with horizontal "nearby cats" rail; tap card → focus
+      sighting on the map. Uses `distance_m` from the `sightings_near` RPC
+      for each card's meta line.
 - [x] `PhotoPin` redesign: teardrop tail + ring + circular cat photo
       (replaces current `CatPin`); annotation anchor moved to `.bottom`
 - [ ] User-location pulse marker (BLUE ring + dot)
