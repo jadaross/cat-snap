@@ -13,64 +13,125 @@ The plan for rebuilding Cat-Snap as a native SwiftUI iOS app. The full master pl
 
 ## Roadmap
 
-| Phase | What | Time |
-|-------|------|------|
+| Phase | What | State |
+|-------|------|-------|
 | 0 | Preserve spec, archive web app | ✅ Done |
-| 1 | Foundations: branding, new Supabase, repo cleanup | In progress |
-| 2 | Walking skeleton: SwiftUI + Supabase auth + one API call | 1–2 weeks |
-| 3 | MVP feature parity: map, submit, profiles | 3–5 weeks |
-| 4 | TestFlight | 1 week |
+| 1 | Foundations: branding, new Supabase, repo cleanup | ✅ Done |
+| 2 | Walking skeleton: SwiftUI + Supabase auth + one API call | **← here** |
+| 3 | MVP feature parity: map, submit, profiles | Next |
+| 4 | TestFlight | Last |
 
-## What's already done
+## Phase 1 — Done
 
-- ✅ Git tag `v1.0.2-web-final` preserves the entire Next.js web app in history.
-- ✅ Web app + Vercel/Next.js root config deleted from working tree.
-- ✅ Web-specific docs (architecture.md, manual-setup.md, database-schema.md, legacy-schema.sql) deleted — superseded by the iOS plan + new schema.
-- ✅ Branding extracted into `docs/brand.md` from the design system at `~/Downloads/cat-snap-branding-and-design/` — palette (cream/ink/coral), typography (Plus Jakarta Sans + Fraunces), mark spec, tagline, voice.
-- ✅ `docs/new-schema.sql` simplified for v1 + augmented with `rarity` column on `cats`. Defers social/gamification tables to v2.
-- ✅ `docs/design-reference.md` indexes the external design folder so future-you can find the source-of-truth mockups.
-- ✅ `README.md` rewritten as a short pointer to the docs.
+- Git tag `v1.0.2-web-final` preserves the entire Next.js web app in history.
+- Web app + Vercel/Next.js root config deleted from the working tree.
+- Web-specific docs deleted — superseded by the iOS plan + new schema.
+- Branding extracted from `~/Downloads/cat-snap-branding-and-design/` into `docs/brand.md` (cream/ink/coral palette, Plus Jakarta Sans + Fraunces, "cat at the window" mark, "spot every cat." tagline).
+- New schema designed at `docs/new-schema.sql` — simpler than v1.0.2 + adds `rarity` on cats. Social/gamification tables deferred to v2.
+- `docs/design-reference.md` indexes the external design folder.
+- `README.md` rewritten as a pointer to the docs.
 
-## What you need to do (Phase 1, remaining)
+### Supabase project state (live)
 
-### No blockers (do now)
+| | |
+|---|---|
+| **Project URL** | `https://wgtjtvxpxalyeukgxbpo.supabase.co` |
+| **Region** | eu-central-2 (Zurich) — ~20ms latency to UK |
+| **Project ID** | `wgtjtvxpxalyeukgxbpo` |
+| **Dashboard** | https://supabase.com/dashboard/project/wgtjtvxpxalyeukgxbpo |
+| **Publishable key** | Saved in your password manager (NOT in this repo) |
 
-1. **Kick off Xcode download** from the Mac App Store. ~10 GB. Background it; takes ~30 minutes.
-2. **Confirm the app icon plan.** The mark exists as the `Window` SVG component in `~/Downloads/cat-snap-branding-and-design/design-canvas.jsx`. Export it as 1024×1024 PNG → `docs/icon-master.png` when ready (can defer until Phase 2).
+Migrations applied:
+- `v1_initial` — extensions, profiles + cats + sightings + sighting_tags tables, `sightings_near` PostGIS RPC, RLS policies, auto-create-profile trigger.
+- `v1_hardening` — `(select auth.uid())` perf optimization on RLS, locked function `search_path`, revoked `EXECUTE` on `handle_new_user`, indexed `cats.created_by` FK.
+- `v1_storage_policy_tightening` — dropped overly broad SELECT policies on `avatars` and `sighting-photos` buckets. Public URL access still works via CDN.
 
-### After app icon is exported (or in parallel)
+Storage buckets (created previously, kept):
+- `sighting-photos` — public, authenticated INSERT only
+- `avatars` — public, authenticated INSERT only
 
-3. **Create the new Supabase project** at [supabase.com](https://supabase.com):
-   - Name: `catsnap` (or your preferred slug — must be URL-safe)
-   - Region: closest to your users
-   - Save Project URL + anon key to a password manager (not git)
-   - Database → Extensions → enable **postgis**
-   - SQL Editor → paste and run [`docs/new-schema.sql`](new-schema.sql)
-   - Authentication → Providers → enable **Email** and **Sign in with Apple**
-     - Sign in with Apple full setup needs an Apple Developer account — defer if you're only running in the simulator for now
-   - Storage → New bucket → `sighting-photos` (public read, authenticated write)
-   - Storage → New bucket → `avatars` (public read, authenticated write)
+Auth providers:
+- Email — enabled by default
+- Sign in with Apple — to be enabled when you have an Apple Developer account ($99/yr); needed before App Store submission, can defer until Phase 4
 
-4. **Decide: same repo vs fresh repo for the iOS code.**
-   - You said you'll keep working in this repo. So when Phase 2 starts, the Xcode project goes at `./CatSnap.xcodeproj` (or similar), `Sources/`, `Resources/` at the root.
-   - Old web app history is preserved via the git tag — no need to fork.
+## Phase 2 — Walking skeleton (in Xcode)
 
-### Phase 1 deliverables checklist
+Goal: a SwiftUI app that signs in via Supabase and fetches one list of sightings. No map, no submit. Proves the data round-trip works end-to-end.
 
-- [x] Branding extracted into `docs/brand.md` (real, not placeholders)
-- [x] `docs/design-reference.md` points at external design folder
-- [x] `docs/new-schema.sql` includes rarity, ready to paste into Supabase
-- [x] Web app deleted, repo cleaned
-- [ ] App icon master `docs/icon-master.png` exported (1024×1024)
-- [ ] Xcode installed
-- [ ] New Supabase project created; URL + anon key saved
-- [ ] PostGIS enabled
-- [ ] `docs/new-schema.sql` run in new Supabase project
-- [ ] Email + Sign in with Apple auth providers enabled
-- [ ] `sighting-photos` and `avatars` storage buckets created
-- [ ] `git push origin v1.0.2-web-final` (push the preservation tag)
+### Step 1: Create the Xcode project (you do — GUI only)
 
-When this checklist is done, you're ready for Phase 2 (Xcode).
+Open Xcode. **File → New → Project**, then:
+
+| Setting | Value |
+|---------|-------|
+| Template | iOS → **App** |
+| Product Name | **CatSnap** (PascalCase, no hyphen — Xcode generates Swift class names from this) |
+| Team | Your Apple ID (or "None" until you have a Developer account) |
+| Organization Identifier | `com.jadaross` |
+| Bundle Identifier | (auto-fills to `com.jadaross.CatSnap`) |
+| Interface | **SwiftUI** |
+| Language | **Swift** |
+| Storage | **None** (we use Supabase, not SwiftData) |
+| Include Tests | ✓ leave on |
+
+When prompted for save location, choose `/Users/jada/Desktop/repos/cat-snap/` and **uncheck "Create Git repository"** (this is already a git repo). The Xcode project will save as `CatSnap.xcodeproj` at the repo root.
+
+### Step 2: Set deployment target to iOS 17
+
+1. In Xcode, click the project file at the top of the file navigator
+2. Select the **CatSnap** target → **General** tab
+3. Set **Minimum Deployments → iOS** to `17.0`
+
+### Step 3: Add the Supabase Swift SDK
+
+1. **File → Add Package Dependencies**
+2. URL: `https://github.com/supabase/supabase-swift`
+3. Dependency rule: **Up to Next Major Version** from `2.0.0`
+4. Add the `Supabase` product to the `CatSnap` target
+
+### Step 4: Add brand fonts
+
+1. Download from Google Fonts:
+   - [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) (weights 400–800)
+   - [Fraunces](https://fonts.google.com/specimen/Fraunces) (italic 900)
+   - [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) (400, 500, 700)
+2. Drop the `.ttf` files into a new `Resources/Fonts/` folder in the project
+3. Add to `Info.plist` under `Fonts provided by application` (UIAppFonts)
+
+### Step 5: Tell Claude "Xcode project created"
+
+Once steps 1–4 are done, Claude will scaffold:
+- `Core/UI/BrandColors.swift` — `Color` extensions for the cream/ink/coral palette
+- `Core/UI/BrandFonts.swift` — `Font.custom` helpers
+- `Core/UI/CatWindowMark.swift` — SwiftUI `Shape` ported from the SVG mark in `design-canvas.jsx`
+- `Core/Supabase/SupabaseClient.swift` — singleton client + URL/key config
+- `Core/Models/Sighting.swift`, `Cat.swift`, `Profile.swift` — Codable structs matching the DB schema
+- `App/CatSnapApp.swift` — `@main` entry with auth gating
+- `Features/Auth/AuthView.swift` — email sign-in / sign-up form
+- `Features/Sightings/SightingsListView.swift` — first round-trip: fetch and display sightings
+- `.xcconfig` for Supabase URL + key (gitignored)
+- Updated `.gitignore` for Xcode artifacts
+
+## Phase 3 — MVP feature parity (preview)
+
+Build the core loop, in this order:
+
+1. **Map view** with **MapKit** — pins from `sightings_near()` RPC.
+2. **Submit sighting flow** — PhotosPicker or camera → on-device JPEG compression → CoreLocation → Supabase Storage upload → DB insert.
+3. **Cat profile + sightings list per cat.**
+4. **User profile screen** — edit display name, avatar.
+5. **Tag display + filter.**
+6. **Rarity badges** on cat cards (already in schema).
+
+Cut from MVP (defer to v2): friend system, reactions/comments, admin merge requests, push notifications, badges, streaks, leaderboard, follows.
+
+## Phase 4 — TestFlight (preview)
+
+1. Apple Developer account ($99/yr).
+2. Configure signing & capabilities (Sign in with Apple, Push Notifications later).
+3. Create app record in App Store Connect.
+4. Archive + upload via Xcode → TestFlight.
+5. Invite friends to use it for real.
 
 ## Tech stack (locked)
 
@@ -78,8 +139,8 @@ When this checklist is done, you're ready for Phase 2 (Xcode).
 |-------|--------|
 | App framework | SwiftUI (iOS 17+) |
 | Language | Swift 5.9+ |
-| Backend | Supabase (new project) |
-| Auth | Supabase Auth + Sign in with Apple |
+| Backend | Supabase (project: `wgtjtvxpxalyeukgxbpo`) |
+| Auth | Supabase Auth + Sign in with Apple (Phase 4) |
 | DB | Postgres + PostGIS |
 | Storage | Supabase Storage |
 | Maps | Apple MapKit |
@@ -89,12 +150,8 @@ When this checklist is done, you're ready for Phase 2 (Xcode).
 | Networking | Supabase Swift SDK only |
 | Fonts | Plus Jakarta Sans, Fraunces, JetBrains Mono (bundled `.ttf`) |
 
-## When you're ready for Phase 2
+## Outstanding optional dashboard tasks
 
-Drop a message — "I've finished Phase 1, what now?" — and we'll:
-- Walk through Xcode project creation step by step at the repo root
-- Add the Supabase Swift SDK via Swift Package Manager
-- Bundle the brand fonts into `Resources/Fonts/`
-- Scaffold the folder structure (`App/`, `Features/`, `Core/`)
-- Build the walking skeleton: auth + one API call
-- Port the `Window` mark from JSX to a SwiftUI `Shape`
+- **Enable leaked password protection** — Authentication → Policies → toggle on. One click.
+- **Delete the orphaned `auth.users` row** from the legacy setup (1 row). Authentication → Users → delete. Or leave it — harmless.
+- **Push the git tag** when convenient: `git push origin v1.0.2-web-final`.
