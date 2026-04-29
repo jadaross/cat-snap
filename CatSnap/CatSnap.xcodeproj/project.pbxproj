@@ -6,13 +6,30 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		0566B91A2FA27198005781EB /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 0566B9192FA27198005781EB /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		0566B8ED2FA26854005781EB /* CatSnap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CatSnap.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		0566B93C2FA273A9005781EB /* Exceptions for "CatSnap" folder in "CatSnap" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 0566B8EC2FA26854005781EB /* CatSnap */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0566B8EF2FA26854005781EB /* CatSnap */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				0566B93C2FA273A9005781EB /* Exceptions for "CatSnap" folder in "CatSnap" target */,
+			);
 			path = CatSnap;
 			sourceTree = "<group>";
 		};
@@ -23,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0566B91A2FA27198005781EB /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -33,6 +51,7 @@
 			isa = PBXGroup;
 			children = (
 				0566B8EF2FA26854005781EB /* CatSnap */,
+				0566B9182FA27198005781EB /* Frameworks */,
 				0566B8EE2FA26854005781EB /* Products */,
 			);
 			sourceTree = "<group>";
@@ -43,6 +62,13 @@
 				0566B8ED2FA26854005781EB /* CatSnap.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		0566B9182FA27198005781EB /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -65,6 +91,7 @@
 			);
 			name = CatSnap;
 			packageProductDependencies = (
+				0566B9192FA27198005781EB /* Supabase */,
 			);
 			productName = CatSnap;
 			productReference = 0566B8ED2FA26854005781EB /* CatSnap.app */;
@@ -94,6 +121,9 @@
 			);
 			mainGroup = 0566B8E42FA26854005781EB;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				0566B9012FA269CD005781EB /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0566B8EE2FA26854005781EB /* Products */;
 			projectDirPath = "";
@@ -256,11 +286,13 @@
 				DEVELOPMENT_TEAM = DFFRB59G23;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CatSnap/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -288,11 +320,13 @@
 				DEVELOPMENT_TEAM = DFFRB59G23;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CatSnap/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -332,6 +366,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		0566B9012FA269CD005781EB /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0566B9192FA27198005781EB /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0566B9012FA269CD005781EB /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0566B8E52FA26854005781EB /* Project object */;
 }
