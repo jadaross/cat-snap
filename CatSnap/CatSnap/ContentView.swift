@@ -1,7 +1,7 @@
 import SwiftUI
 
 // Top-level gate: while the auth session is loading, show the brand splash.
-// Once known, route to AuthView or SightingsListView based on session state.
+// Once known, route to AuthView or the MainTabView based on session state.
 struct ContentView: View {
     @Environment(AuthSession.self) private var session
 
@@ -12,7 +12,7 @@ struct ContentView: View {
         case .signedOut:
             AuthView()
         case .signedIn:
-            SightingsListView()
+            MainTabView()
         }
     }
 }

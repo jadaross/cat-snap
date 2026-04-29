@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Cat-Snap uses the camera so you can photograph cats you spot.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Cat-Snap tags each sighting with the spot you saw the cat, so others can find them too.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Cat-Snap reads photos from your library when you pick one to log a sighting.</string>
 	<key>SUPABASE_URL</key>
 	<string>$(SUPABASE_URL)</string>
 	<key>SUPABASE_ANON_KEY</key>

@@ -37,7 +37,6 @@ final class SightingsListModel {
 }
 
 struct SightingsListView: View {
-    @Environment(AuthSession.self) private var session
     @State private var model = SightingsListModel()
 
     var body: some View {
@@ -48,15 +47,6 @@ struct SightingsListView: View {
             }
             .navigationTitle("sightings")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("sign out") {
-                        Task { try? await session.signOut() }
-                    }
-                    .font(.Brand.jakarta(.medium, size: 14))
-                    .foregroundStyle(Color.stone)
-                }
-            }
         }
         .task { await model.load() }
     }
