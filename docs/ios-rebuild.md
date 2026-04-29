@@ -1,6 +1,6 @@
 # iOS Rebuild — In-Repo Reference
 
-The plan for rebuilding Cat-Snap as a native SwiftUI iOS app. The full master plan lives at `~/.claude/plans/goofy-seeking-flame.md`; this file is the in-repo companion that's checked into history.
+The plan for rebuilding Cat-Snap as a native SwiftUI iOS app — checked into history as the in-repo companion to the per-session plans in `~/.claude/plans/`.
 
 ## Decision summary
 
@@ -17,9 +17,9 @@ The plan for rebuilding Cat-Snap as a native SwiftUI iOS app. The full master pl
 |-------|------|-------|
 | 0 | Preserve spec, archive web app | ✅ Done |
 | 1 | Foundations: branding, new Supabase, repo cleanup | ✅ Done |
-| 2 | Walking skeleton: SwiftUI + Supabase auth + one API call | **← here** |
-| 3 | MVP feature parity: map, submit, profiles | Next |
-| 4 | TestFlight | Last |
+| 2 | Walking skeleton: SwiftUI + Supabase auth + first round-trip | ✅ Done |
+| 3 | MVP feature parity: map, submit, profiles | ✅ Done |
+| 4 | TestFlight | **← here** |
 
 ## Phase 1 — Done
 
@@ -45,93 +45,66 @@ Migrations applied:
 - `v1_initial` — extensions, profiles + cats + sightings + sighting_tags tables, `sightings_near` PostGIS RPC, RLS policies, auto-create-profile trigger.
 - `v1_hardening` — `(select auth.uid())` perf optimization on RLS, locked function `search_path`, revoked `EXECUTE` on `handle_new_user`, indexed `cats.created_by` FK.
 - `v1_storage_policy_tightening` — dropped overly broad SELECT policies on `avatars` and `sighting-photos` buckets. Public URL access still works via CDN.
+- `find_or_create_cat_rpc` — case-insensitive cat-name → cat-id resolution. Currently unused (subsumed by `create_sighting_with_cat`); kept as a small reusable building block.
+- `create_sighting_with_cat_rpc` — atomic single-call RPC for the submit flow: resolves cat by id-or-name (creating if missing), inserts the sighting with a server-built geography point, inserts tags. Replaced the three-call client sequence and fixed the orphan-cats failure mode.
 
-Storage buckets (created previously, kept):
-- `sighting-photos` — public, authenticated INSERT only
-- `avatars` — public, authenticated INSERT only
+Storage buckets:
+- `sighting-photos` — public read via CDN, authenticated INSERT only
+- `avatars` — public read via CDN, authenticated INSERT only
 
 Auth providers:
-- Email — enabled by default
-- Sign in with Apple — to be enabled when you have an Apple Developer account ($99/yr); needed before App Store submission, can defer until Phase 4
+- Email — enabled (email confirmation toggled OFF for dev; re-enable before TestFlight + configure SMTP)
+- Sign in with Apple — to be enabled in Phase 4 once an Apple Developer account is in place
 
-## Phase 2 — Walking skeleton (in Xcode)
+## Phase 2 — Done
 
-Goal: a SwiftUI app that signs in via Supabase and fetches one list of sightings. No map, no submit. Proves the data round-trip works end-to-end.
+A signed-in walking skeleton that proves the data round-trip end-to-end.
 
-### Step 1: Create the Xcode project (you do — GUI only)
+Shipped:
+- Xcode project at `CatSnap/CatSnap.xcodeproj` (synchronized folder layout — files inside `CatSnap/CatSnap/` auto-appear in the build).
+- `Supabase` Swift SDK linked, plus `PostgREST`, `Storage`, `Auth` sub-products.
+- `CatSnap.xcconfig` (gitignored) → Info.plist `$(VAR)` substitution for `SUPABASE_URL` and `SUPABASE_ANON_KEY`. The `.example.xcconfig` is committed as a template.
+- Brand primitives — `BrandColors`, `BrandFonts`, `CatWindowMark` (SVG ported on the 200-unit grid), `Wordmark`. Six `.ttf` files bundled (one Fraunces black-italic, four Plus Jakarta weights, one JetBrains Mono regular).
+- Codable models matching the schema field-for-field with snake_case `CodingKeys`. PostGIS `location` column intentionally not modelled in Swift; reads go via the `sightings_near` RPC's `NearbySighting` shape.
+- Module-level `let supabase: SupabaseClient` global. `emitLocalSessionAsInitialSession: true` opts into supabase-swift v3 init behavior.
+- `AuthSession` (`@Observable @MainActor`) subscribes to `authStateChanges` and exposes a `.loading` / `.signedOut` / `.signedIn(User)` enum.
+- `ContentView` is the auth gate: routes to `BrandSplash` / `AuthView` / signed-in tabs.
+- `AuthView` — email + password sign-in/up.
 
-Open Xcode. **File → New → Project**, then:
+## Phase 3 — Done
 
-| Setting | Value |
-|---------|-------|
-| Template | iOS → **App** |
-| Product Name | **CatSnap** (PascalCase, no hyphen — Xcode generates Swift class names from this) |
-| Team | Your Apple ID (or "None" until you have a Developer account) |
-| Organization Identifier | `com.jadaross` |
-| Bundle Identifier | (auto-fills to `com.jadaross.CatSnap`) |
-| Interface | **SwiftUI** |
-| Language | **Swift** |
-| Storage | **None** (we use Supabase, not SwiftData) |
-| Include Tests | ✓ leave on |
+Closed the core loop: see cats on a map → snap a new cat → see it appear → manage your profile.
 
-When prompted for save location, choose `/Users/jada/Desktop/repos/cat-snap/` and **uncheck "Create Git repository"** (this is already a git repo). The Xcode project will save as `CatSnap.xcodeproj` at the repo root.
+Shipped:
+- **Tabbed home** — `MainTabView` with Map and Profile tabs, plus a coral "+" overlay button that opens `SubmitView` as a fullScreenCover.
+- **Map** — SwiftUI `Map` (iOS 17 API) with `Annotation` per `NearbySighting`. Re-fetches when the camera centre moves >500 m. Per-cat circular `CatPin` (white border, amber when selected). `PinDetailCard` slides up on selection and pushes `CatProfileView` via NavigationStack. Top-leading time filter (today / week / all), top-trailing find-me button, empty-state card.
+- **Submit flow** — PhotosPicker (library) and `UIImagePickerController` (camera) → on-device JPEG compress (max 1600px, q=0.7) → `LocationManager` one-shot fix with `CLGeocoder` reverse-geocode → atomic `create_sighting_with_cat` RPC. NotificationCenter post triggers a map refresh in place.
+- **Cat profile** — hero photo, info card with name + last-seen + stats, "i saw this cat" CTA opens Submit prefilled with the cat id, sightings thumbnail grid.
+- **User profile** — avatar, display name, stats, my-sightings grid, `EditProfileSheet` for changing display name + avatar (uploads to `avatars` bucket, updates `profiles.avatar_url`), sign-out in the toolbar.
+- **Cross-cutting primitives** — `RarityBadge`, `TagChip` (with the 12 preset tags from the design canvas), `AsyncCatImage` (cream-deep placeholder + brand-mark fallback), `SightingThumbnail` (square cell with a relative-time stamp).
 
-### Step 2: Set deployment target to iOS 17
+Deferred to v2 (intentionally not built):
+- Friend system, follows, reactions, comments, merge_requests
+- Push notifications, badges, streaks, leaderboard
+- Per-sighting visibility, TNR/caretaker flags on cats
+- Notes field on sightings
+- AI cat-matching at submit time (Phase 4 / v3 territory)
 
-1. In Xcode, click the project file at the top of the file navigator
-2. Select the **CatSnap** target → **General** tab
-3. Set **Minimum Deployments → iOS** to `17.0`
+## Phase 4 — TestFlight
 
-### Step 3: Add the Supabase Swift SDK
+This is mostly your work — the things that need an Apple Developer account.
 
-1. **File → Add Package Dependencies**
-2. URL: `https://github.com/supabase/supabase-swift`
-3. Dependency rule: **Up to Next Major Version** from `2.0.0`
-4. Add the `Supabase` product to the `CatSnap` target
-
-### Step 4: Add brand fonts
-
-1. Download from Google Fonts:
-   - [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) (weights 400–800)
-   - [Fraunces](https://fonts.google.com/specimen/Fraunces) (italic 900)
-   - [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) (400, 500, 700)
-2. Drop the `.ttf` files into a new `Resources/Fonts/` folder in the project
-3. Add to `Info.plist` under `Fonts provided by application` (UIAppFonts)
-
-### Step 5: Tell Claude "Xcode project created"
-
-Once steps 1–4 are done, Claude will scaffold:
-- `Core/UI/BrandColors.swift` — `Color` extensions for the cream/ink/coral palette
-- `Core/UI/BrandFonts.swift` — `Font.custom` helpers
-- `Core/UI/CatWindowMark.swift` — SwiftUI `Shape` ported from the SVG mark in `design-canvas.jsx`
-- `Core/Supabase/SupabaseClient.swift` — singleton client + URL/key config
-- `Core/Models/Sighting.swift`, `Cat.swift`, `Profile.swift` — Codable structs matching the DB schema
-- `App/CatSnapApp.swift` — `@main` entry with auth gating
-- `Features/Auth/AuthView.swift` — email sign-in / sign-up form
-- `Features/Sightings/SightingsListView.swift` — first round-trip: fetch and display sightings
-- `.xcconfig` for Supabase URL + key (gitignored)
-- Updated `.gitignore` for Xcode artifacts
-
-## Phase 3 — MVP feature parity (preview)
-
-Build the core loop, in this order:
-
-1. **Map view** with **MapKit** — pins from `sightings_near()` RPC.
-2. **Submit sighting flow** — PhotosPicker or camera → on-device JPEG compression → CoreLocation → Supabase Storage upload → DB insert.
-3. **Cat profile + sightings list per cat.**
-4. **User profile screen** — edit display name, avatar.
-5. **Tag display + filter.**
-6. **Rarity badges** on cat cards (already in schema).
-
-Cut from MVP (defer to v2): friend system, reactions/comments, admin merge requests, push notifications, badges, streaks, leaderboard, follows.
-
-## Phase 4 — TestFlight (preview)
-
-1. Apple Developer account ($99/yr).
-2. Configure signing & capabilities (Sign in with Apple, Push Notifications later).
-3. Create app record in App Store Connect.
-4. Archive + upload via Xcode → TestFlight.
-5. Invite friends to use it for real.
+1. **Apple Developer account** ($99/yr): https://developer.apple.com/programs/enroll/
+2. **App Store Connect** record: register the bundle id `com.jadaross.CatSnap`, set name + subtitle ("spot every cat.") + description.
+3. **App icon**: 1024×1024 PNG, no transparency, no rounded corners. Master at `docs/icon-master.png` once exported. Add to `Assets.xcassets/AppIcon.appiconset/`.
+4. **Sign in with Apple**:
+   - Xcode → CatSnap target → **Signing & Capabilities** → `+` → Sign in with Apple
+   - Supabase Dashboard → Authentication → Providers → Apple → enable, fill in Service ID + key
+   - Add a "Sign in with Apple" button to `AuthView` using `SignInWithAppleButton` from AuthenticationServices
+5. **Re-enable email confirmation** in Supabase Auth + configure SMTP (Resend or Postmark) so confirmation mails reach Hotmail/Outlook reliably.
+6. **Privacy strings audit** — already have NSCamera, NSLocationWhenInUse, NSPhotoLibrary descriptions. Add NSUserTrackingUsageDescription if any analytics get wired later.
+7. **Archive + upload** — Xcode → Product → Archive → distribute to TestFlight.
+8. **Invite test flight users** by email in App Store Connect.
 
 ## Tech stack (locked)
 
@@ -153,5 +126,5 @@ Cut from MVP (defer to v2): friend system, reactions/comments, admin merge reque
 ## Outstanding optional dashboard tasks
 
 - **Enable leaked password protection** — Authentication → Policies → toggle on. One click.
-- **Delete the orphaned `auth.users` row** from the legacy setup (1 row). Authentication → Users → delete. Or leave it — harmless.
+- **Re-enable email confirmation + configure SMTP** before TestFlight (was disabled during Phase 2 to unblock dev signup).
 - **Push the git tag** when convenient: `git push origin v1.0.2-web-final`.
