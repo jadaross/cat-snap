@@ -168,6 +168,17 @@ struct MapView: View {
             VStack(spacing: 8) {
                 SpotsHeader(view: $exploreView)
                     .padding(.top, 8)
+
+                if let recent = mostRecentSighting, selectedSighting == nil {
+                    LiveTickerChip(
+                        title: tickerTitle(for: recent),
+                        timestamp: relativeShort(for: recent.seenAt),
+                        onTap: { focus(on: recent) }
+                    )
+                    .padding(.horizontal, 16)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
                 HStack {
                     timeFilterRow
                     Spacer()
@@ -238,6 +249,38 @@ struct MapView: View {
         case .today: return "no sightings today"
         case .week:  return "no sightings this week"
         case .all:   return "no cats spotted nearby"
+        }
+    }
+
+    // Most recent sighting in the last hour — drives the live ticker chip.
+    private var mostRecentSighting: NearbySighting? {
+        let oneHourAgo = Date().addingTimeInterval(-3600)
+        return model.sightings
+            .filter { $0.seenAt > oneHourAgo }
+            .max(by: { $0.seenAt < $1.seenAt })
+    }
+
+    private func tickerTitle(for sighting: NearbySighting) -> String {
+        let name = sighting.catName ?? "a cat"
+        if let label = sighting.locationLabel, !label.isEmpty {
+            return "\(name) just spotted · \(label)"
+        }
+        return "\(name) just spotted nearby"
+    }
+
+    private func relativeShort(for date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func focus(on sighting: NearbySighting) {
+        selectedSighting = sighting
+        withAnimation {
+            cameraPosition = .region(MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: sighting.lat, longitude: sighting.lng),
+                span: Self.defaultSpan
+            ))
         }
     }
 

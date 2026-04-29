@@ -39,7 +39,8 @@ on its own.
 - [ ] `GuideListView` body: progress bar (`23 / 60 · E. LONDON`), filter chips
       (All / ★ Legends / Rare / Today / Missing), 3-col grid with locked `?`
       silhouettes for unspotted cats (currently a placeholder)
-- [ ] Live ticker chip on map view (`Marmalade just spotted · 60m away`)
+- [x] Live ticker chip on map view: shows the most recent sighting in the
+      last hour, pulse dot, tap to centre + select on the map
 - [ ] Bottom card peek with horizontal "nearby cats" rail
 - [x] `PhotoPin` redesign: teardrop tail + ring + circular cat photo
       (replaces current `CatPin`); annotation anchor moved to `.bottom`
