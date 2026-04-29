@@ -10,9 +10,10 @@ final class MapModel {
     var isLoading = false
     var error: String?
 
-    /// Latest centre used for fetching — we only re-fetch when the user pans
-    /// far enough that "what's nearby" likely changed.
+    /// Latest centre + radius used for fetching — for the post-submit refresh
+    /// where the user hasn't moved.
     private var lastFetchCentre: CLLocationCoordinate2D?
+    private var lastRadiusMeters: Double = 5_000
     private let refetchThresholdMeters: Double = 500
 
     func fetchIfNeeded(centre: CLLocationCoordinate2D, radiusMeters: Double) async {
@@ -26,10 +27,16 @@ final class MapModel {
         await fetch(centre: centre, radiusMeters: radiusMeters)
     }
 
+    func refresh() async {
+        guard let centre = lastFetchCentre else { return }
+        await fetch(centre: centre, radiusMeters: lastRadiusMeters)
+    }
+
     func fetch(centre: CLLocationCoordinate2D, radiusMeters: Double) async {
         isLoading = true
         defer { isLoading = false }
         lastFetchCentre = centre
+        lastRadiusMeters = radiusMeters
         do {
             let params: [String: Double] = [
                 "p_lat": centre.latitude,
@@ -111,6 +118,9 @@ struct MapView: View {
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: selectedSighting?.id)
         .task {
             await model.fetch(centre: .london, radiusMeters: 5_000)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .sightingSubmitted)) { _ in
+            Task { await model.refresh() }
         }
     }
 }

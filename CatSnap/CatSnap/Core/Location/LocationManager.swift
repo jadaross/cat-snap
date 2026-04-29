@@ -10,16 +10,17 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     private(set) var lastLocation: CLLocation?
     private(set) var isResolving = false
 
-    private var continuation: CheckedContinuation<CLLocation, Error>?
+    private var authContinuation: CheckedContinuation<Void, Error>?
+    private var locationContinuation: CheckedContinuation<CLLocation, Error>?
 
     enum LocationError: LocalizedError {
         case denied
-        case timeout
+        case unavailable
 
         var errorDescription: String? {
             switch self {
-            case .denied:  return "Location access is off. Enable it in Settings → Cat-Snap."
-            case .timeout: return "Couldn't get your location. Try again outside or near a window."
+            case .denied:      return "Location access is off. Enable it in Settings → Cat-Snap."
+            case .unavailable: return "Couldn't get your location. Try again in a moment."
             }
         }
     }
@@ -31,27 +32,33 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         manager.desiredAccuracy = kCLLocationAccuracyBest
     }
 
-    func requestAuthorization() {
-        manager.requestWhenInUseAuthorization()
-    }
-
-    /// One-shot location fix. Awaits authorization if not yet decided.
+    /// One-shot location fix. If authorization hasn't been decided, prompts
+    /// the user and waits for the response before requesting a location.
     func requestOneShot() async throws -> CLLocation {
-        switch authorizationStatus {
-        case .notDetermined:
-            requestAuthorization()
-        case .denied, .restricted:
-            throw LocationError.denied
-        default:
-            break
-        }
+        try await ensureAuthorized()
 
         isResolving = true
         defer { isResolving = false }
 
         return try await withCheckedThrowingContinuation { cont in
-            self.continuation = cont
+            self.locationContinuation = cont
             self.manager.requestLocation()
+        }
+    }
+
+    private func ensureAuthorized() async throws {
+        switch authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            return
+        case .denied, .restricted:
+            throw LocationError.denied
+        case .notDetermined:
+            try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+                self.authContinuation = cont
+                self.manager.requestWhenInUseAuthorization()
+            }
+        @unknown default:
+            throw LocationError.denied
         }
     }
 
@@ -60,7 +67,6 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         guard let placemark = try? await geocoder.reverseGeocodeLocation(location).first else {
             return nil
         }
-        // "Brick Lane, E1" — thoroughfare or sublocality, plus postal code prefix.
         let line1 = placemark.thoroughfare ?? placemark.subLocality ?? placemark.locality
         let line2 = placemark.postalCode.flatMap { $0.split(separator: " ").first.map(String.init) }
         return [line1, line2].compactMap { $0 }.joined(separator: ", ").nilIfEmpty
@@ -68,12 +74,22 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
 
     // MARK: - CLLocationManagerDelegate
 
-    nonisolated func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
         Task { @MainActor in
             self.authorizationStatus = status
-            if status == .denied || status == .restricted {
-                continuation?.resume(throwing: LocationError.denied)
-                continuation = nil
+            guard let cont = self.authContinuation else { return }
+            self.authContinuation = nil
+            switch status {
+            case .authorizedWhenInUse, .authorizedAlways:
+                cont.resume(returning: ())
+            case .denied, .restricted:
+                cont.resume(throwing: LocationError.denied)
+            case .notDetermined:
+                // Shouldn't happen after explicit request; treat as denial.
+                cont.resume(throwing: LocationError.denied)
+            @unknown default:
+                cont.resume(throwing: LocationError.denied)
             }
         }
     }
@@ -82,15 +98,15 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         Task { @MainActor in
             guard let location = locations.last else { return }
             self.lastLocation = location
-            continuation?.resume(returning: location)
-            continuation = nil
+            self.locationContinuation?.resume(returning: location)
+            self.locationContinuation = nil
         }
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         Task { @MainActor in
-            continuation?.resume(throwing: error)
-            continuation = nil
+            self.locationContinuation?.resume(throwing: error)
+            self.locationContinuation = nil
         }
     }
 }

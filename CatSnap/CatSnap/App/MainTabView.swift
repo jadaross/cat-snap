@@ -35,7 +35,7 @@ struct MainTabView: View {
             .accessibilityLabel("snap a sighting")
         }
         .fullScreenCover(isPresented: $isSubmitPresented) {
-            SubmitPlaceholder(isPresented: $isSubmitPresented)
+            SubmitView()
         }
     }
 }
@@ -62,22 +62,3 @@ private struct UserProfilePlaceholder: View {
     }
 }
 
-// Placeholder until slice 3.B builds the real submit flow.
-private struct SubmitPlaceholder: View {
-    @Binding var isPresented: Bool
-
-    var body: some View {
-        ZStack {
-            Color.cream.ignoresSafeArea()
-            VStack(spacing: 16) {
-                CatWindowMark(size: 96)
-                Text("submit flow coming next")
-                    .font(.Brand.jakarta(.semibold, size: 16))
-                    .foregroundStyle(Color.ink)
-                Button("close") { isPresented = false }
-                    .font(.Brand.jakarta(.medium, size: 14))
-                    .foregroundStyle(Color.coral)
-            }
-        }
-    }
-}

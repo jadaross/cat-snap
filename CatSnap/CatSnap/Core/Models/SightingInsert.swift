@@ -1,16 +1,35 @@
 import Foundation
 
 /// Encodable payload matching the `sightings` table for inserts.
-/// The `location` PostGIS column accepts a GeoJSON object; PostgREST
-/// auto-casts to `geography(Point, 4326)` when the column type is set.
+/// `location` is sent as PostGIS-compatible WKT ("POINT(lng lat)"); the
+/// column's SRID 4326 is applied automatically.
 struct SightingInsert: Encodable {
     let userId: UUID
     let catId: UUID?
     let photoUrl: URL
-    let location: GeoJSONPoint
+    let location: String
     let locationLabel: String?
     let notes: String?
     let seenAt: Date
+
+    init(
+        userId: UUID,
+        catId: UUID?,
+        photoUrl: URL,
+        latitude: Double,
+        longitude: Double,
+        locationLabel: String?,
+        notes: String?,
+        seenAt: Date
+    ) {
+        self.userId = userId
+        self.catId = catId
+        self.photoUrl = photoUrl
+        self.location = "SRID=4326;POINT(\(longitude) \(latitude))"
+        self.locationLabel = locationLabel
+        self.notes = notes
+        self.seenAt = seenAt
+    }
 
     enum CodingKeys: String, CodingKey {
         case userId         = "user_id"
@@ -20,15 +39,6 @@ struct SightingInsert: Encodable {
         case locationLabel  = "location_label"
         case notes
         case seenAt         = "seen_at"
-    }
-}
-
-struct GeoJSONPoint: Encodable {
-    let type = "Point"
-    let coordinates: [Double]  // [lng, lat] — GeoJSON convention is x, y
-
-    init(latitude: Double, longitude: Double) {
-        self.coordinates = [longitude, latitude]
     }
 }
 
