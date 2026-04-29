@@ -58,7 +58,9 @@ final class MapModel {
 
 struct MapView: View {
     @State private var model = MapModel()
+    @State private var locationManager = LocationManager()
     @State private var selectedSighting: NearbySighting?
+    @State private var path = NavigationPath()
     @State private var cameraPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
             center: .london,
@@ -66,7 +68,19 @@ struct MapView: View {
         )
     )
 
+    private static let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
+
     var body: some View {
+        NavigationStack(path: $path) {
+            mapContent
+                .navigationDestination(for: UUID.self) { catId in
+                    CatProfileView(catId: catId)
+                }
+                .toolbar(.hidden, for: .navigationBar)
+        }
+    }
+
+    private var mapContent: some View {
         ZStack(alignment: .bottom) {
             Map(position: $cameraPosition, selection: Binding(
                 get: { selectedSighting?.id },
@@ -99,7 +113,9 @@ struct MapView: View {
 
             if let selected = selectedSighting {
                 PinDetailCard(sighting: selected) {
-                    // TODO (slice 3.C): push CatProfileView for selected.catId.
+                    if let catId = selected.catId {
+                        path.append(catId)
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 96)
@@ -114,13 +130,59 @@ struct MapView: View {
                     .padding(.top, 8)
                     .frame(maxHeight: .infinity, alignment: .top)
             }
+
+            // Recentre-to-user button, top-right
+            Button {
+                Task { await recenterToUser(prompting: true) }
+            } label: {
+                Image(systemName: "location.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.coral)
+                    .frame(width: 44, height: 44)
+                    .background(Color.creamSoft, in: .circle)
+                    .shadow(color: Color.ink.opacity(0.18), radius: 6, y: 2)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            .padding(16)
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: selectedSighting?.id)
         .task {
-            await model.fetch(centre: .london, radiusMeters: 5_000)
+            await initialCentre()
         }
         .onReceive(NotificationCenter.default.publisher(for: .sightingSubmitted)) { _ in
             Task { await model.refresh() }
+        }
+    }
+
+    private func initialCentre() async {
+        // If location's already granted, centre on the user. Otherwise default
+        // to London — don't pop a permission prompt just for the map.
+        switch locationManager.authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            await recenterToUser(prompting: false)
+        default:
+            await model.fetch(centre: .london, radiusMeters: 5_000)
+        }
+    }
+
+    private func recenterToUser(prompting: Bool) async {
+        do {
+            // If we'd trigger a permission prompt and the caller said no, bail.
+            if !prompting && locationManager.authorizationStatus == .notDetermined {
+                await model.fetch(centre: .london, radiusMeters: 5_000)
+                return
+            }
+            let location = try await locationManager.requestOneShot()
+            withAnimation {
+                cameraPosition = .region(MKCoordinateRegion(
+                    center: location.coordinate,
+                    span: Self.defaultSpan
+                ))
+            }
+            await model.fetch(centre: location.coordinate, radiusMeters: 5_000)
+        } catch {
+            // Silent failure — user can pan manually. Map already centred on London.
+            await model.fetch(centre: .london, radiusMeters: 5_000)
         }
     }
 }
