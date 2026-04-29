@@ -36,9 +36,13 @@ on its own.
 
 - [x] `SpotsHeader`: map/list pill toggle (`Map` / `Guide`) + location search pill
 - [x] `ExploreView` wrapper that owns the toggle state and swaps MapView ↔ GuideListView
-- [ ] `GuideListView` body: progress bar (`23 / 60 · E. LONDON`), filter chips
-      (All / ★ Legends / Rare / Today / Missing), 3-col grid with locked `?`
-      silhouettes for unspotted cats (currently a placeholder)
+- [x] `GuideListView` body: progress bar (count vs total cats in DB),
+      All / ★ Legends / Rare / Today / Missing filter chips, 3-col grid
+      with locked `?` silhouettes for un-spotted cats. New `GuideModel`
+      pulls all cats + the current user's sightings; tap an unlocked
+      cat → push CatProfileView via the list's own NavigationStack.
+- [ ] (Follow-up) Region label: today shows raw count; design wants
+      `23 / 60 · E. LONDON` once a region concept is added server-side
 - [x] Live ticker chip on map view: shows the most recent sighting in the
       last hour, pulse dot, tap to centre + select on the map
 - [x] Bottom card peek with horizontal "nearby cats" rail; tap card → focus
