@@ -105,7 +105,8 @@ struct SubmitView: View {
             Task {
                 if let data = try? await newItem.loadTransferable(type: Data.self),
                    let image = UIImage(data: data) {
-                    await model.acceptPhoto(image)
+                    let exif = ExifMetadata.extract(from: data)
+                    await model.acceptUploadedPhoto(image, exif: exif)
                 }
             }
         }
@@ -301,21 +302,36 @@ struct SubmitView: View {
                     .clipped()
             }
 
-            if let label = model.locationLabel, !label.isEmpty {
-                Text("JUST NOW · \(label.uppercased())")
-                    .font(.Brand.jakarta(.bold, size: 10))
-                    .tracking(0.4)
-                    .foregroundStyle(Color.creamSoft)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color.coral, in: .capsule)
-                    .padding(12)
-            }
+            Text(photoBadgeText)
+                .font(.Brand.jakarta(.bold, size: 10))
+                .tracking(0.4)
+                .foregroundStyle(Color.creamSoft)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(Color.coral, in: .capsule)
+                .padding(12)
         }
         .frame(height: 220)
         .clipShape(.rect(cornerRadius: 18))
         .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.stoneLight, lineWidth: 1))
         .shadow(color: Color.ink.opacity(0.08), radius: 12, y: 8)
+    }
+
+    private var photoBadgeText: String {
+        var prefix = "JUST NOW"
+        if model.isFromCameraRoll {
+            if let exifDate = model.exifSeenAt {
+                let f = DateFormatter()
+                f.dateFormat = "EEE · HH:mm"
+                prefix = f.string(from: exifDate).uppercased()
+            } else {
+                prefix = "FROM CAMERA ROLL"
+            }
+        }
+        if let label = model.locationLabel, !label.isEmpty {
+            return "\(prefix) · \(label.uppercased())"
+        }
+        return prefix
     }
 
     private func sectionLabel(_ text: String) -> some View {

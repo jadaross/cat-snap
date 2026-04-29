@@ -71,16 +71,22 @@ on its own.
 
 ## Phase 4 — Upload from photos (screens 04 + 05 + 06)
 
-- [ ] Camera-roll picker: chronological grid (`Today` / `This week` / month
-      sections), no auto-detection copy, filters limited to
-      `All / With location / Recent`
-- [ ] Multi-select with coral border + check, sticky `Review N ›` footer
-- [ ] Review screen: photo + `WHO IS THIS?` (`+ A new cat` / `From your guide`),
-      EXIF date/time + GPS rows with `EXIF ✓` / `GPS ✓` pills, mini-map preview
-- [ ] Date/time editor: quick chips (`Now` / `Today` / `Yesterday` / `Pick…`),
-      HR:MIN nudge block
-- [ ] EXIF extraction: `PHAsset.creationDate`, `PHAsset.location`
-- [ ] Reuse existing `create_sighting_with_cat` RPC — no schema change
+- [x] EXIF extraction utility (`Core/Util/ExifMetadata.swift`) using
+      ImageIO — pulls `DateTimeOriginal` and GPS lat/lng straight out of
+      the JPEG bytes; no Photos-library permission needed
+- [x] `SubmitModel.acceptUploadedPhoto(_:exif:)` accepts a picked photo
+      with its EXIF, pre-fills location + reverse-geocoded label, and
+      skips the live-location step entirely when GPS is present
+- [x] Submit RPC payload uses `exifSeenAt ?? Date()` so the sighting
+      timestamps to when the photo was taken, not when it was logged
+- [x] Editor photo card shows `EEE · HH:mm · LOCATION` when from camera
+      roll, or `FROM CAMERA ROLL` when GPS-only
+- [ ] (Follow-up) Camera-roll picker: chronological grid + multi-select
+      sticky `Review N ›` footer (current PhotosPicker is single-select)
+- [ ] (Follow-up) Standalone review screen with `EXIF ✓ / GPS ✓` pills
+      and mini-map preview before the editor
+- [ ] (Follow-up) Date/time editor with quick chips (`Now / Today /
+      Yesterday / Pick…`)
 
 ## Phase 5 — Name & tag + Spotted! (screens 07 + 08)
 

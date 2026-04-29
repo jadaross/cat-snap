@@ -23,6 +23,13 @@ final class SubmitModel {
     var locationLabel: String?
     var catName: String = ""
     var tags: Set<String> = []
+    /// When set, overrides `Date()` in the submit payload — used when an
+    /// uploaded photo carries an EXIF DateTimeOriginal so the sighting is
+    /// timestamped to when it was taken, not when it was logged.
+    var exifSeenAt: Date?
+    /// True if the current photo came from the camera roll (not a live snap).
+    /// Surfaces "from camera roll" affordances in the editor.
+    var isFromCameraRoll: Bool = false
 
     let prefilledCatId: UUID?
     private let locationManager = LocationManager()
@@ -33,8 +40,27 @@ final class SubmitModel {
 
     func acceptPhoto(_ image: UIImage) async {
         self.image = image
+        isFromCameraRoll = false
+        exifSeenAt = nil
         stage = .capturingLocation
         await captureLocation()
+    }
+
+    /// Accepts a photo picked from the library. EXIF date + location are
+    /// pre-filled when present so we skip the live-location capture step.
+    func acceptUploadedPhoto(_ image: UIImage, exif: ExifMetadata.Extracted) async {
+        self.image = image
+        isFromCameraRoll = true
+        exifSeenAt = exif.creationDate
+
+        if let exifLoc = exif.location {
+            location = exifLoc
+            locationLabel = await locationManager.reverseGeocode(exifLoc)
+            stage = .editing
+        } else {
+            stage = .capturingLocation
+            await captureLocation()
+        }
     }
 
     private func captureLocation() async {
@@ -78,7 +104,7 @@ final class SubmitModel {
                 lat: location.coordinate.latitude,
                 lng: location.coordinate.longitude,
                 locationLabel: locationLabel,
-                seenAt: Date(),
+                seenAt: exifSeenAt ?? Date(),
                 tags: tags.sorted()
             )
 
