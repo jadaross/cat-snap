@@ -56,11 +56,30 @@ final class MapModel {
     }
 }
 
+enum TimeFilter: String, CaseIterable, Hashable {
+    case today, week, all
+
+    var label: String { rawValue }
+
+    func includes(_ date: Date, now: Date = Date()) -> Bool {
+        switch self {
+        case .all:
+            return true
+        case .today:
+            return Calendar.current.isDate(date, inSameDayAs: now)
+        case .week:
+            guard let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: now) else { return true }
+            return date >= weekAgo
+        }
+    }
+}
+
 struct MapView: View {
     @State private var model = MapModel()
     @State private var locationManager = LocationManager()
     @State private var selectedSighting: NearbySighting?
     @State private var path = NavigationPath()
+    @State private var timeFilter: TimeFilter = .all
     @State private var cameraPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
             center: .london,
@@ -69,6 +88,10 @@ struct MapView: View {
     )
 
     private static let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
+
+    private var filteredSightings: [NearbySighting] {
+        model.sightings.filter { timeFilter.includes($0.seenAt) }
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -85,10 +108,10 @@ struct MapView: View {
             Map(position: $cameraPosition, selection: Binding(
                 get: { selectedSighting?.id },
                 set: { id in
-                    selectedSighting = id.flatMap { tag in model.sightings.first { $0.id == tag } }
+                    selectedSighting = id.flatMap { tag in filteredSightings.first { $0.id == tag } }
                 }
             )) {
-                ForEach(model.sightings) { sighting in
+                ForEach(filteredSightings) { sighting in
                     Annotation(
                         sighting.catName ?? "",
                         coordinate: CLLocationCoordinate2D(latitude: sighting.lat, longitude: sighting.lng)
@@ -122,35 +145,96 @@ struct MapView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
+            // Empty-state card. Shown when nothing matched the filter.
+            if !model.isLoading && filteredSightings.isEmpty && selectedSighting == nil {
+                emptyStateCard
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 96)
+                    .transition(.opacity)
+            }
+
             if model.isLoading {
                 ProgressView()
                     .tint(Color.coral)
                     .padding(8)
                     .background(Color.creamSoft, in: .capsule)
-                    .padding(.top, 8)
+                    .padding(.top, 64)
                     .frame(maxHeight: .infinity, alignment: .top)
             }
 
-            // Recentre-to-user button, top-right
-            Button {
-                Task { await recenterToUser(prompting: true) }
-            } label: {
-                Image(systemName: "location.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.coral)
-                    .frame(width: 44, height: 44)
-                    .background(Color.creamSoft, in: .circle)
-                    .shadow(color: Color.ink.opacity(0.18), radius: 6, y: 2)
+            // Top-leading filter pills + top-trailing recentre button.
+            VStack {
+                HStack {
+                    timeFilterRow
+                    Spacer()
+                    recenterButton
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                Spacer()
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-            .padding(16)
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: selectedSighting?.id)
+        .animation(.easeInOut(duration: 0.2), value: filteredSightings.count)
         .task {
             await initialCentre()
         }
         .onReceive(NotificationCenter.default.publisher(for: .sightingSubmitted)) { _ in
             Task { await model.refresh() }
+        }
+    }
+
+    private var timeFilterRow: some View {
+        HStack(spacing: 6) {
+            ForEach(TimeFilter.allCases, id: \.self) { filter in
+                TagChip(
+                    tag: filter.label,
+                    isActive: timeFilter == filter,
+                    onTap: { timeFilter = filter }
+                )
+            }
+        }
+        .padding(6)
+        .background(Color.creamSoft.opacity(0.92), in: .capsule)
+        .shadow(color: Color.ink.opacity(0.12), radius: 6, y: 2)
+    }
+
+    private var recenterButton: some View {
+        Button {
+            Task { await recenterToUser(prompting: true) }
+        } label: {
+            Image(systemName: "location.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Color.coral)
+                .frame(width: 44, height: 44)
+                .background(Color.creamSoft, in: .circle)
+                .shadow(color: Color.ink.opacity(0.18), radius: 6, y: 2)
+        }
+    }
+
+    private var emptyStateCard: some View {
+        VStack(spacing: 8) {
+            CatWindowMark(size: 48, showSill: false)
+                .opacity(0.7)
+            Text(emptyStateTitle)
+                .font(.Brand.jakarta(.semibold, size: 14))
+                .foregroundStyle(Color.ink)
+            Text("tap + to log one.")
+                .font(.Brand.jakarta(.regular, size: 12))
+                .foregroundStyle(Color.stone)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(Color.creamSoft.opacity(0.95), in: .rect(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.stoneLight, lineWidth: 1))
+        .shadow(color: Color.ink.opacity(0.08), radius: 8, y: 2)
+    }
+
+    private var emptyStateTitle: String {
+        switch timeFilter {
+        case .today: return "no sightings today"
+        case .week:  return "no sightings this week"
+        case .all:   return "no cats spotted nearby"
         }
     }
 

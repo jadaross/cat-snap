@@ -68,39 +68,23 @@ final class SubmitModel {
         stage = .submitting
 
         do {
-            let userId = try await supabase.auth.session.user.id
-
             let photoUrl = try await PhotoUpload.uploadSightingPhoto(image)
 
-            let resolvedCatId = try await resolveCatId()
-
-            let payload = SightingInsert(
-                userId: userId,
-                catId: resolvedCatId,
-                photoUrl: photoUrl,
-                latitude: location.coordinate.latitude,
-                longitude: location.coordinate.longitude,
+            let trimmedName = catName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let payload = CreateSightingPayload(
+                catName: prefilledCatId == nil ? (trimmedName.isEmpty ? nil : trimmedName) : nil,
+                existingCatId: prefilledCatId,
+                photoUrl: photoUrl.absoluteString,
+                lat: location.coordinate.latitude,
+                lng: location.coordinate.longitude,
                 locationLabel: locationLabel,
-                notes: nil,
-                seenAt: Date()
+                seenAt: Date(),
+                tags: tags.sorted()
             )
 
-            let inserted: [Sighting] = try await supabase
-                .from("sightings")
-                .insert(payload)
-                .select()
+            _ = try await supabase
+                .rpc("create_sighting_with_cat", params: payload)
                 .execute()
-                .value
-
-            if let sighting = inserted.first, !tags.isEmpty {
-                let tagPayloads = tags.sorted().map {
-                    SightingTagInsert(sightingId: sighting.id, tag: $0)
-                }
-                try await supabase
-                    .from("sighting_tags")
-                    .insert(tagPayloads)
-                    .execute()
-            }
 
             stage = .done
             NotificationCenter.default.post(name: .sightingSubmitted, object: nil)
@@ -108,16 +92,26 @@ final class SubmitModel {
             stage = .error(error.localizedDescription)
         }
     }
+}
 
-    private func resolveCatId() async throws -> UUID? {
-        if let prefilledCatId { return prefilledCatId }
-        let trimmed = catName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
+private struct CreateSightingPayload: Encodable {
+    let catName: String?
+    let existingCatId: UUID?
+    let photoUrl: String
+    let lat: Double
+    let lng: Double
+    let locationLabel: String?
+    let seenAt: Date
+    let tags: [String]
 
-        let resolved: UUID? = try await supabase
-            .rpc("find_or_create_cat", params: ["p_name": trimmed])
-            .execute()
-            .value
-        return resolved
+    enum CodingKeys: String, CodingKey {
+        case catName        = "p_cat_name"
+        case existingCatId  = "p_existing_cat_id"
+        case photoUrl       = "p_photo_url"
+        case lat            = "p_lat"
+        case lng            = "p_lng"
+        case locationLabel  = "p_location_label"
+        case seenAt         = "p_seen_at"
+        case tags           = "p_tags"
     }
 }
