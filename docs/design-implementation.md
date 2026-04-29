@@ -99,11 +99,17 @@ on its own.
 
 ## Phase 6 — Cat profile (screen 09)
 
-- [ ] Hero photo + rarity badge restyled
-- [ ] Stats card (last seen, total spots, regulars)
-- [ ] Home-range mini-map
-- [ ] `I spotted them!` CTA → Submit prefilled (existing wiring preserved)
-- [ ] Sightings grid restyled
+- [x] Full-bleed hero photo with darkening gradients top + bottom
+- [x] Glassy back + ellipsis buttons over the hero (back wires to dismiss)
+- [x] Hero title block: rarity capsule + Fraunces lowercase name +
+      "last seen Xm ago" subtitle
+- [x] 3-up stats row (sightings / unique spotters / known-for days)
+- [x] Recent-sightings grid restyled at 3 columns, capped at 9 with
+      "SEE ALL" stamp
+- [x] Sticky CTA: coral "I spotted them!" + cream heart side-button
+      (heart inert until v2 favourites)
+- [ ] (Follow-up) Home-range mini-map — needs a way to render an MKMap
+      snapshot constrained to the cat's sighting bounds
 
 ## Phase 7 — You (screen 10)
 
