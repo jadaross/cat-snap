@@ -30,5 +30,16 @@ let supabase: SupabaseClient = {
         )
     }
 
-    return SupabaseClient(supabaseURL: url, supabaseKey: key)
+    return SupabaseClient(
+        supabaseURL: url,
+        supabaseKey: key,
+        options: SupabaseClientOptions(
+            auth: SupabaseClientOptions.AuthOptions(
+                // Opt in to the v3 behavior: always emit the locally stored
+                // session as the initial session, regardless of validity.
+                // Suppresses the runtime warning from supabase-swift PR #822.
+                emitLocalSessionAsInitialSession: true
+            )
+        )
+    )
 }()
