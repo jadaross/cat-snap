@@ -1,18 +1,37 @@
 import SwiftUI
 
-// Top-level gate: while the auth session is loading, show the brand splash.
-// Once known, route to AuthView or the MainTabView based on session state.
+// Top-level gate. Routing depends on auth state and two onboarding flags:
+//
+//   pre-auth done?  signed in?  post-auth done?  → destination
+//   no              no          —                  PreAuthOnboardingView
+//   yes             no          —                  AuthView
+//   —               yes         no                 PostAuthOnboardingView
+//   —               yes         yes                MainTabView
+//
+// The two flags exist because sign-up can require email confirmation: the user
+// finishes pre-auth, leaves to confirm, returns. We don't want to re-run the
+// permission screens.
 struct ContentView: View {
     @Environment(AuthSession.self) private var session
+    @AppStorage(OnboardingFlags.preAuthDoneKey) private var preAuthDone: Bool = false
+    @AppStorage(OnboardingFlags.postAuthDoneKey) private var postAuthDone: Bool = false
 
     var body: some View {
         switch session.state {
         case .loading:
             BrandSplash()
         case .signedOut:
-            AuthView()
+            if preAuthDone {
+                AuthView()
+            } else {
+                PreAuthOnboardingView()
+            }
         case .signedIn:
-            MainTabView()
+            if postAuthDone {
+                MainTabView()
+            } else {
+                PostAuthOnboardingView()
+            }
         }
     }
 }

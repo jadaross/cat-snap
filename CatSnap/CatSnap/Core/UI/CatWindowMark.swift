@@ -77,7 +77,10 @@ struct CatWindowMark: View {
         }
         .frame(width: Self.canvasUnit, height: Self.canvasUnit, alignment: .topLeading)
         .scaleEffect(size / Self.canvasUnit, anchor: .topLeading)
-        .frame(width: size, height: size)
+        // Pin the (now-scaled) 200-unit content to the top-left of a size×size
+        // box, otherwise SwiftUI centers the unscaled 200×200 frame inside the
+        // smaller box and the visual content drifts up-left by (canvas - size)/2.
+        .frame(width: size, height: size, alignment: .topLeading)
     }
 }
 
