@@ -54,13 +54,20 @@ on its own.
 
 ## Phase 3 — Snap (screen 03)
 
-- [ ] Dark camera screen (replaces today's nav-style `pickingPhoto` stage)
-- [ ] `HOLD STEADY` reticle overlay
-- [ ] Top hint card: `3 cats spotted on this street today`
-- [ ] `VIDEO / PHOTO / BURST` mode selector (only PHOTO wired in v1)
-- [ ] `UPLOAD` button (left) → routes to Phase 4
-- [ ] Big shutter w/ `SNAP` label (center)
-- [ ] `FLIP` camera button (right) — `AVCaptureDevice.Position` toggle
+- [x] Dark gradient screen replaces the `pickingPhoto` stage; nav bar
+      hidden + `.preferredColorScheme(.dark)` so the iOS status bar reads
+      light against the gradient
+- [x] Top tip card (placeholder copy — "photo will be tagged with your
+      location")
+- [x] `VIDEO / PHOTO / BURST` mode selector (visual only — only PHOTO is
+      reachable in v1)
+- [x] `UPLOAD` glass chip on the left — opens PhotosPicker
+- [x] Shutter w/ `SNAP` label — opens the existing UIImagePickerController
+- [x] Custom xmark dismiss button top-leading
+- [ ] (Follow-up) `HOLD STEADY` reticle — needs an AV preview to feel real,
+      skipped for now since we hand off to the system picker
+- [ ] (Follow-up) `FLIP` button is decorative; rewire once we host an
+      AVCaptureSession instead of UIImagePickerController
 
 ## Phase 4 — Upload from photos (screens 04 + 05 + 06)
 

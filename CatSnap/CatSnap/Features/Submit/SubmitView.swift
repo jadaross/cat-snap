@@ -15,11 +15,16 @@ struct SubmitView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.cream.ignoresSafeArea()
+                if isOnCameraStage {
+                    Color.ink.ignoresSafeArea()
+                } else {
+                    Color.cream.ignoresSafeArea()
+                }
                 content
             }
-            .navigationTitle("snap a sighting")
+            .navigationTitle(isOnCameraStage ? "" : "snap a sighting")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(isOnCameraStage ? .hidden : .visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("cancel") { dismiss() }
@@ -28,6 +33,11 @@ struct SubmitView: View {
                 }
             }
         }
+    }
+
+    private var isOnCameraStage: Bool {
+        if case .pickingPhoto = model.stage { return true }
+        return false
     }
 
     @ViewBuilder
@@ -47,27 +57,43 @@ struct SubmitView: View {
     // MARK: - Photo source
 
     private var photoSourceView: some View {
-        VStack(spacing: 28) {
-            Spacer()
-            CatWindowMark(size: 120)
-            Text("snap a cat")
-                .font(.Brand.jakarta(.semibold, size: 18))
-                .foregroundStyle(Color.ink)
-            Spacer()
+        ZStack {
+            // Dark viewfinder placeholder. We don't run an AV preview in v1 —
+            // tap-shutter hands off to UIImagePickerController which surfaces
+            // the live camera UI. Source: `CatSnap App.html` lines 401–457.
+            LinearGradient(
+                colors: [
+                    Color(red: 0.29, green: 0.26, blue: 0.23),
+                    Color(red: 0.16, green: 0.14, blue: 0.13),
+                    Color(red: 0.08, green: 0.07, blue: 0.05)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
 
-            VStack(spacing: 12) {
-                if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                    Button { showCamera = true } label: {
-                        primaryLabel("take photo")
-                    }
-                }
-                PhotosPicker(selection: $pickedItem, matching: .images) {
-                    secondaryLabel("from library")
-                }
+            RadialGradient(
+                colors: [Color.coralDeep.opacity(0.25), .clear],
+                center: UnitPoint(x: 0.52, y: 0.58),
+                startRadius: 0,
+                endRadius: 350
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                cameraTopBar
+                tipCard
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                Spacer()
+                modeSelector
+                    .padding(.bottom, 24)
+                captureRow
+                    .padding(.horizontal, 36)
+                    .padding(.bottom, 36)
             }
-            .padding(.horizontal, 32)
-            .padding(.bottom, 32)
         }
+        .preferredColorScheme(.dark)
         .fullScreenCover(isPresented: $showCamera) {
             CameraPicker { image in
                 Task { await model.acceptPhoto(image) }
@@ -81,6 +107,136 @@ struct SubmitView: View {
                    let image = UIImage(data: data) {
                     await model.acceptPhoto(image)
                 }
+            }
+        }
+    }
+
+    private var cameraTopBar: some View {
+        HStack {
+            Button { dismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.creamSoft)
+                    .frame(width: 36, height: 36)
+                    .background(Color.creamSoft.opacity(0.15), in: .circle)
+                    .overlay(Circle().stroke(Color.creamSoft.opacity(0.55), lineWidth: 1.5))
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+    }
+
+    private var tipCard: some View {
+        HStack(spacing: 10) {
+            ZStack {
+                Circle().fill(Color.coral.opacity(0.18))
+                CatWindowMark(size: 20, showSill: false)
+            }
+            .frame(width: 30, height: 30)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("snap a sighting")
+                    .font(.Brand.jakarta(.bold, size: 13))
+                    .foregroundStyle(Color.ink)
+                Text("photo will be tagged with your location.")
+                    .font(.Brand.jakarta(.regular, size: 11))
+                    .foregroundStyle(Color.stone)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Color.creamSoft.opacity(0.97), in: .rect(cornerRadius: 14))
+        .shadow(color: Color.ink.opacity(0.4), radius: 8, y: 6)
+    }
+
+    private var modeSelector: some View {
+        HStack(spacing: 18) {
+            modeLabel("VIDEO", isActive: false)
+            modeLabel("PHOTO", isActive: true)
+            modeLabel("BURST", isActive: false)
+        }
+    }
+
+    private func modeLabel(_ text: String, isActive: Bool) -> some View {
+        Text(text)
+            .font(.Brand.jakarta(.bold, size: 11))
+            .tracking(1.5)
+            .foregroundStyle(
+                isActive ? Color.streetlampYellow : Color.creamSoft.opacity(0.55)
+            )
+    }
+
+    private var captureRow: some View {
+        HStack {
+            // UPLOAD — opens the photo library
+            PhotosPicker(selection: $pickedItem, matching: .images) {
+                VStack(spacing: 5) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.creamSoft.opacity(0.14))
+                            .frame(width: 48, height: 48)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(Color.creamSoft.opacity(0.55), lineWidth: 1.5)
+                            )
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(Color.creamSoft)
+                    }
+                    Text("UPLOAD")
+                        .font(.Brand.mono(size: 9))
+                        .tracking(0.8)
+                        .foregroundStyle(Color.creamSoft.opacity(0.9))
+                }
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            // SHUTTER — opens the live camera
+            Button {
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    showCamera = true
+                }
+            } label: {
+                VStack(spacing: 4) {
+                    ZStack {
+                        Circle()
+                            .stroke(Color.creamSoft, lineWidth: 4)
+                            .frame(width: 76, height: 76)
+                        Circle()
+                            .fill(Color.coral)
+                            .frame(width: 64, height: 64)
+                    }
+                    Text("SNAP")
+                        .font(.Brand.mono(size: 9))
+                        .tracking(0.8)
+                        .foregroundStyle(Color.creamSoft.opacity(0.9))
+                        .offset(y: 6)
+                }
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            // FLIP — visual placeholder, native picker handles the active flip
+            VStack(spacing: 5) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color.creamSoft.opacity(0.14))
+                        .frame(width: 48, height: 48)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color.creamSoft.opacity(0.55), lineWidth: 1.5)
+                        )
+                    Image(systemName: "arrow.triangle.2.circlepath.camera")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.creamSoft)
+                }
+                Color.clear.frame(height: 12) // align with UPLOAD label
             }
         }
     }
