@@ -253,104 +253,209 @@ struct SubmitView: View {
     // MARK: - Editor
 
     private var editorView: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                if let image = model.image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(height: 240)
-                        .frame(maxWidth: .infinity)
-                        .clipShape(.rect(cornerRadius: 12))
-                        .padding(.horizontal, 16)
-                }
-
-                if let label = model.locationLabel {
-                    HStack(spacing: 6) {
-                        Image(systemName: "mappin.circle.fill")
-                            .foregroundStyle(Color.coral)
-                        Text(label)
-                            .font(.Brand.jakarta(.medium, size: 13))
-                            .foregroundStyle(Color.stone)
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("name")
-                        .font(.Brand.jakarta(.semibold, size: 13))
-                        .foregroundStyle(Color.ink)
-                    TextField("optional — Marmalade, etc.", text: $model.catName)
-                        .font(.Brand.jakarta(.regular, size: 16))
-                        .padding(.horizontal, 14)
-                        .frame(height: 44)
-                        .background(Color.creamSoft, in: .rect(cornerRadius: 8))
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.stoneLight, lineWidth: 1))
-                        .textInputAutocapitalization(.words)
-                        .autocorrectionDisabled()
-                }
-                .padding(.horizontal, 16)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("tags")
-                        .font(.Brand.jakarta(.semibold, size: 13))
-                        .foregroundStyle(Color.ink)
-                    LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 80), spacing: 6, alignment: .leading)],
-                        alignment: .leading,
-                        spacing: 6
-                    ) {
-                        ForEach(TagChip.presets, id: \.self) { tag in
-                            TagChip(
-                                tag: tag,
-                                isActive: model.tags.contains(tag),
-                                onTap: { model.toggleTag(tag) }
-                            )
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-
-                if case .error(let msg) = model.stage {
-                    Text(msg)
-                        .font(.Brand.jakarta(.medium, size: 13))
-                        .foregroundStyle(Color.coralDeep)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 16)
-                }
-
-                Button {
-                    Task { await model.submit() }
-                } label: {
-                    primaryLabel(model.stage == .submitting ? "submitting…" : "submit")
-                }
-                .disabled(model.stage == .submitting)
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
+        VStack(spacing: 0) {
+            // "NEW SIGHTING" stamp header — replaces the SwiftUI nav title in
+            // editing stage so the styling matches `CatSnap App.html` line 735.
+            HStack {
+                Spacer()
+                Text("NEW SIGHTING")
+                    .font(.Brand.mono(size: 11))
+                    .tracking(1.4)
+                    .foregroundStyle(Color.stone)
+                Spacer()
             }
-            .padding(.vertical, 16)
+            .padding(.bottom, 8)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    photoCard
+                    sectionLabel("NAME")
+                    nameField
+                    sectionLabel("TAGS")
+                    tagChips
+                    if case .error(let msg) = model.stage {
+                        Text(msg)
+                            .font(.Brand.jakarta(.medium, size: 13))
+                            .foregroundStyle(Color.coralDeep)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                    }
+                    Color.clear.frame(height: 8)
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
+            }
+
+            stickyCTA
         }
+    }
+
+    private var photoCard: some View {
+        ZStack(alignment: .topLeading) {
+            if let image = model.image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(height: 220)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+            }
+
+            if let label = model.locationLabel, !label.isEmpty {
+                Text("JUST NOW · \(label.uppercased())")
+                    .font(.Brand.jakarta(.bold, size: 10))
+                    .tracking(0.4)
+                    .foregroundStyle(Color.creamSoft)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.coral, in: .capsule)
+                    .padding(12)
+            }
+        }
+        .frame(height: 220)
+        .clipShape(.rect(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.stoneLight, lineWidth: 1))
+        .shadow(color: Color.ink.opacity(0.08), radius: 12, y: 8)
+    }
+
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.Brand.mono(size: 10))
+            .tracking(1.2)
+            .foregroundStyle(Color.stone)
+    }
+
+    private var nameField: some View {
+        TextField("Marmalade, Biscuit…", text: $model.catName)
+            .font(.Brand.jakarta(.bold, size: 16))
+            .foregroundStyle(Color.ink)
+            .padding(.horizontal, 14)
+            .frame(height: 48)
+            .background(Color.creamSoft, in: .rect(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.stoneLight, lineWidth: 1))
+            .textInputAutocapitalization(.words)
+            .autocorrectionDisabled()
+    }
+
+    private var tagChips: some View {
+        LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 80), spacing: 6, alignment: .leading)],
+            alignment: .leading,
+            spacing: 6
+        ) {
+            ForEach(TagChip.presets, id: \.self) { tag in
+                TagChip(
+                    tag: tag,
+                    isActive: model.tags.contains(tag),
+                    onTap: { model.toggleTag(tag) }
+                )
+            }
+        }
+    }
+
+    private var stickyCTA: some View {
+        VStack(spacing: 0) {
+            Rectangle().fill(Color.stoneLight).frame(height: 1)
+            Button {
+                Task { await model.submit() }
+            } label: {
+                Text(submitButtonLabel)
+                    .font(.Brand.jakarta(.bold, size: 16))
+                    .foregroundStyle(Color.creamSoft)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color.coral, in: .rect(cornerRadius: 14))
+            }
+            .disabled(model.stage == .submitting)
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 12)
+        }
+        .background(Color.creamSoft)
+    }
+
+    private var submitButtonLabel: String {
+        if model.stage == .submitting { return "submitting…" }
+        let trimmed = model.catName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            return "Pin \(trimmed) on the map  →"
+        }
+        return "Pin on the map  →"
     }
 
     // MARK: - Success
 
     private var successView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 80))
-                .foregroundStyle(Color.sage)
-            Text("submitted")
-                .font(.Brand.jakarta(.semibold, size: 22))
-                .foregroundStyle(Color.ink)
-            Text("you spotted a cat.")
-                .font(.Brand.jakarta(.regular, size: 14))
-                .foregroundStyle(Color.stone)
+        // Source: `CatSnap App.html` lines 904–941 (SpottedConfirm).
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
 
-            Button { dismiss() } label: {
-                primaryLabel("back to map")
+            VStack(spacing: 6) {
+                spottedHero
+                    .padding(.bottom, 20)
+
+                Text("+1 SIGHTING")
+                    .font(.Brand.mono(size: 11))
+                    .tracking(1.6)
+                    .foregroundStyle(Color.coral)
+                    .padding(.top, 6)
+
+                Text(spottedTitle)
+                    .font(.Brand.frauncesBlackItalic(size: 44))
+                    .tracking(-1.6)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(-6)
+                    .foregroundStyle(Color.ink)
+                    .padding(.top, 4)
             }
             .padding(.horizontal, 32)
-            .padding(.top, 8)
+
+            Spacer(minLength: 0)
+
+            VStack(spacing: 10) {
+                Button { dismiss() } label: {
+                    Text("See on the map")
+                        .font(.Brand.jakarta(.bold, size: 16))
+                        .foregroundStyle(Color.creamSoft)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(Color.ink, in: .rect(cornerRadius: 14))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
         }
+    }
+
+    private var spottedHero: some View {
+        ZStack {
+            // Sage pulse halo
+            Circle()
+                .fill(Color.sage.opacity(0.18))
+                .frame(width: 200, height: 200)
+                .modifier(SpottedPulseModifier())
+
+            CatWindowMark(size: 140, showSill: false, frameColor: .coral, blink: true)
+
+            // Sage check badge bottom-right of the window mark
+            Image(systemName: "checkmark")
+                .font(.system(size: 22, weight: .heavy))
+                .foregroundStyle(Color.creamSoft)
+                .frame(width: 56, height: 56)
+                .background(Color.sage, in: .circle)
+                .overlay(Circle().stroke(Color.cream, lineWidth: 4))
+                .shadow(color: Color.sage.opacity(0.4), radius: 8, y: 6)
+                .offset(x: 60, y: 56)
+        }
+        .frame(height: 200)
+    }
+
+    private var spottedTitle: String {
+        let trimmed = model.catName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            return "\(trimmed.lowercased())\nspotted!"
+        }
+        return "spotted!"
     }
 
     // MARK: - Buttons
@@ -372,6 +477,25 @@ struct SubmitView: View {
             .frame(height: 48)
             .background(Color.creamSoft, in: .rect(cornerRadius: 10))
             .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.stoneLight, lineWidth: 1))
+    }
+}
+
+// MARK: - Pulse ring (Spotted! hero)
+
+private struct SpottedPulseModifier: ViewModifier {
+    @State private var scale: CGFloat = 1
+    @State private var opacity: Double = 0.5
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(scale)
+            .opacity(opacity)
+            .onAppear {
+                withAnimation(.easeOut(duration: 2).repeatForever(autoreverses: false)) {
+                    scale = 2.4
+                    opacity = 0
+                }
+            }
     }
 }
 

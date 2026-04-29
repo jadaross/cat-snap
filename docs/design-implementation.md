@@ -84,10 +84,18 @@ on its own.
 
 ## Phase 5 — Name & tag + Spotted! (screens 07 + 08)
 
-- [ ] Restyle Submit's `editing` stage to match the NameTag layout
-- [ ] Tag chips, "is this a regular?" match suggestions
-- [ ] `SpottedConfirm` success screen: coral gradient hero + award unlock card
-- [ ] Wire success → existing `NotificationCenter.sightingSubmitted` post
+- [x] Restyle Submit's `editing` stage: rounded photo card with coral
+      "JUST NOW · {locality}" badge, mono section labels, sticky bottom
+      "Pin {name} on the map →" CTA
+- [x] Tag chips already in place — kept the existing TagChip presets
+- [x] `SpottedConfirm` success screen: cat window mark with sage pulse
+      halo, sage check badge, +1 SIGHTING mono coral, Fraunces "name
+      spotted!" headline, ink "See on the map" CTA
+- [x] Existing `.sightingSubmitted` NotificationCenter post is preserved
+- [ ] (Follow-up) "IS THIS A REGULAR?" match suggestions row — needs a
+      cat-similarity backend call; deferred
+- [ ] (Follow-up) Award unlocked card on Spotted! — needs an awards
+      backend; deferred to v2
 
 ## Phase 6 — Cat profile (screen 09)
 
