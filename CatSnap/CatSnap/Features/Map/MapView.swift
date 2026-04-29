@@ -114,7 +114,8 @@ struct MapView: View {
                 ForEach(filteredSightings) { sighting in
                     Annotation(
                         sighting.catName ?? "",
-                        coordinate: CLLocationCoordinate2D(latitude: sighting.lat, longitude: sighting.lng)
+                        coordinate: CLLocationCoordinate2D(latitude: sighting.lat, longitude: sighting.lng),
+                        anchor: .bottom
                     ) {
                         CatPin(
                             photoUrl: sighting.catPhotoUrl ?? sighting.photoUrl,

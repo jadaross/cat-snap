@@ -40,8 +40,8 @@ on its own.
       silhouettes for unspotted cats
 - [ ] Live ticker chip on map view (`Marmalade just spotted · 60m away`)
 - [ ] Bottom card peek with horizontal "nearby cats" rail
-- [ ] `PhotoPin` redesign: teardrop tail + ring + circular cat photo
-      (replaces current `CatPin`)
+- [x] `PhotoPin` redesign: teardrop tail + ring + circular cat photo
+      (replaces current `CatPin`); annotation anchor moved to `.bottom`
 - [ ] User-location pulse marker (BLUE ring + dot)
 
 ## Phase 3 — Snap (screen 03)
