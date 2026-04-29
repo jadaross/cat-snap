@@ -12,7 +12,7 @@ struct MainTabView: View {
                 .tabItem { Label("map", systemImage: "map") }
                 .tag(Tab.map)
 
-            UserProfilePlaceholder()
+            UserProfileView()
                 .tabItem { Label("profile", systemImage: "person.crop.circle") }
                 .tag(Tab.profile)
         }
@@ -39,26 +39,3 @@ struct MainTabView: View {
         }
     }
 }
-
-// Placeholder until slice 3.D builds the user profile.
-private struct UserProfilePlaceholder: View {
-    @Environment(AuthSession.self) private var session
-
-    var body: some View {
-        ZStack {
-            Color.cream.ignoresSafeArea()
-            VStack(spacing: 16) {
-                CatWindowMark(size: 96)
-                Text("profile coming next")
-                    .font(.Brand.jakarta(.semibold, size: 16))
-                    .foregroundStyle(Color.ink)
-                Button("sign out") {
-                    Task { try? await session.signOut() }
-                }
-                .font(.Brand.jakarta(.medium, size: 14))
-                .foregroundStyle(Color.coral)
-            }
-        }
-    }
-}
-
