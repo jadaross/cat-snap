@@ -148,18 +148,17 @@ on its own.
 - [x] iOS API: `FriendsModel` with `follow / unfollow / loadFriends /
       loadActivity / search`
 - [x] AddFriendsView: debounced username search, +Add / ✓ Following
-      capsule on each row, QR + Share-invite tiles as visual stubs
+      capsule on each row
 - [x] You profile gains a Friends section: avatar row + `+ Add` pill,
       RECENT activity preview (top 2), tap section header → Friends
       activity feed
 - [x] FriendsActivityView: full chronological feed of friends'
       sightings, photo cards push to CatProfileView
-- [ ] (Follow-up) Friend stories `live` indicator — needs a presence
-      signal (e.g. last-snap-within-N-min) on the API side
 - [ ] (Follow-up) "I see them too" reaction button on each card —
       needs a reactions table
-- [ ] (Follow-up) Scan QR + Share invite — needs a Universal Link
-      entitlement and a Vision-camera flow respectively
+
+**Cut (intentionally not building):** the design's `live` friend-stories
+indicator, QR-scan add, and share-invite tile.
 
 ---
 

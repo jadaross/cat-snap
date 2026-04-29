@@ -1,9 +1,8 @@
 import SwiftUI
 
 // Search profiles + follow. Source: `CatSnap App.html` lines 1256–1314
-// (AddFriends screen). QR scan and share-invite quick actions are visual
-// stubs in v1 — they need an Apple Universal Link entitlement and a
-// Vision-framework camera flow respectively.
+// (AddFriends screen). The QR scan and share-invite quick actions from
+// the design have been intentionally cut.
 struct AddFriendsView: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -20,7 +19,6 @@ struct AddFriendsView: View {
             VStack(spacing: 0) {
                 header
                 searchBar
-                quickActions
                 resultsList
             }
         }
@@ -70,30 +68,6 @@ struct AddFriendsView: View {
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.stoneLight, lineWidth: 1))
         .padding(.horizontal, 16)
         .padding(.bottom, 12)
-    }
-
-    private var quickActions: some View {
-        HStack(spacing: 8) {
-            quickAction(emoji: "📷", label: "Scan QR")
-            quickAction(emoji: "🔗", label: "Share invite")
-        }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 14)
-    }
-
-    private func quickAction(emoji: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(emoji)
-                .font(.system(size: 22))
-            Text(label)
-                .font(.Brand.jakarta(.bold, size: 13))
-                .foregroundStyle(Color.ink)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.creamSoft, in: .rect(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.stoneLight, lineWidth: 1))
     }
 
     @ViewBuilder
