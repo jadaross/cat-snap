@@ -113,12 +113,23 @@ on its own.
 
 ## Phase 7 — You (screen 10)
 
-- [ ] Avatar + display name + handle
-- [ ] Stats grid (cats / spots / streak)
-- [ ] Awards grid with one yellow rare treatment + offset shadow
-- [ ] 14-day streak heatmap (ink/yellow combo)
-- [ ] `Friends` section header (tappable, links to v2 feed when shipped)
-- [ ] `+ Add` button (v2 wiring)
+- [x] Coral header: cream-soft wordmark + settings gear menu, rounded-16
+      avatar tile (76pt), Fraunces display name + `@username`, dark-tinted
+      stats row (SIGHTINGS / CATS / STREAK / AWARDS)
+- [x] Awards grid: 4-column 12-tile grid with computed local awards
+      (First Snap, streaks, night-owl etc.), yellow + ink-bordered rare
+      tiles with offset 2x2 shadow
+- [x] Streak card: ink bg, yellow `CURRENT STREAK` mono, 56pt Fraunces
+      day count, 17-cell heatmap; current streak computed by walking
+      backward from today through the user's sightings
+- [x] Settings gear menu hosts edit profile + sign out (replaces the old
+      toolbar button)
+- [x] `my sightings` grid kept until friends activity feed lands
+- [ ] (Follow-up) Friends section header + `+ Add` row — wired in
+      Phase 8 (v2)
+- [ ] (Follow-up) Surface a stable streak count when there are zero
+      sightings today but a recent streak yesterday (currently resets
+      the moment today turns over)
 
 ## Phase 8 — Friends (screens 11 + 12) · DEFERRED to v2
 
