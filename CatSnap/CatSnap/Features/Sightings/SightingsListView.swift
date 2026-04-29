@@ -1,4 +1,6 @@
 import SwiftUI
+import Supabase
+import PostgREST
 
 @MainActor
 @Observable

@@ -157,6 +157,8 @@
 /* Begin XCBuildConfiguration section */
 		0566B8F62FA26855005781EB /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 0566B8EF2FA26854005781EB /* CatSnap */;
+			baseConfigurationReferenceRelativePath = CatSnap.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -221,6 +223,8 @@
 		};
 		0566B8F72FA26855005781EB /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 0566B8EF2FA26854005781EB /* CatSnap */;
+			baseConfigurationReferenceRelativePath = CatSnap.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -278,6 +282,8 @@
 		};
 		0566B8F92FA26855005781EB /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 0566B8EF2FA26854005781EB /* CatSnap */;
+			baseConfigurationReferenceRelativePath = CatSnap.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -312,6 +318,8 @@
 		};
 		0566B8FA2FA26855005781EB /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 0566B8EF2FA26854005781EB /* CatSnap */;
+			baseConfigurationReferenceRelativePath = CatSnap.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
