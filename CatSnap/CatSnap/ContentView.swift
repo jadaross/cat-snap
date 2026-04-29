@@ -1,35 +1,35 @@
 import SwiftUI
 
-// Brand smoke test screen — proves colors, fonts, and the cat-window mark
-// load correctly. Replaced with real Auth + map navigation in the next phase.
+// Top-level gate: while the auth session is loading, show the brand splash.
+// Once known, route to AuthView or SightingsListView based on session state.
 struct ContentView: View {
+    @Environment(AuthSession.self) private var session
+
+    var body: some View {
+        switch session.state {
+        case .loading:
+            BrandSplash()
+        case .signedOut:
+            AuthView()
+        case .signedIn:
+            SightingsListView()
+        }
+    }
+}
+
+private struct BrandSplash: View {
     var body: some View {
         ZStack {
             Color.cream.ignoresSafeArea()
-
-            VStack(spacing: 32) {
-                Spacer()
-
-                CatWindowMark(size: 160)
-
-                VStack(spacing: 8) {
-                    Wordmark(size: 64)
-                    Text("spot every cat.")
-                        .font(.Brand.jakarta(.medium, size: 16))
-                        .foregroundStyle(Color.stone)
-                }
-
-                Spacer()
-
-                Text("system v1 · 2026")
-                    .font(.Brand.mono(size: 11))
-                    .foregroundStyle(Color.stone.opacity(0.7))
-                    .padding(.bottom, 24)
+            VStack(spacing: 20) {
+                CatWindowMark(size: 140)
+                Wordmark(size: 56)
+                Text("spot every cat.")
+                    .font(.Brand.jakarta(.medium, size: 15))
+                    .foregroundStyle(Color.stone)
             }
         }
     }
 }
 
-#Preview {
-    ContentView()
-}
+#Preview("Splash")    { BrandSplash() }
