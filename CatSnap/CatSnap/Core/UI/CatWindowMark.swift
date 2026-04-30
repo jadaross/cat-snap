@@ -138,15 +138,17 @@ private struct Eye: View {
                 .offset(x: 3.3, y: 2.8)
                 .scaleEffect(y: closed ? 0.1 : 1, anchor: .center)
         }
-        .onAppear {
+        .task {
             guard blink else { return }
-            // 4s loop: 200ms blink, ~3.8s open. Animation is best-effort in the
-            // brand mark; refine when this gets used in a hero/onboarding moment.
-            Timer.scheduledTimer(withTimeInterval: 4, repeats: true) { _ in
+            // 4s loop: 200ms blink, ~3.8s open. Driven from .task so cancelling
+            // when the view disappears stops the loop cleanly.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(3.8))
+                if Task.isCancelled { return }
                 withAnimation(.easeInOut(duration: 0.1)) { closed = true }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    withAnimation(.easeInOut(duration: 0.1)) { closed = false }
-                }
+                try? await Task.sleep(for: .milliseconds(200))
+                if Task.isCancelled { return }
+                withAnimation(.easeInOut(duration: 0.1)) { closed = false }
             }
         }
     }

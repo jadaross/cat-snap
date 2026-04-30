@@ -40,9 +40,18 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         isResolving = true
         defer { isResolving = false }
 
-        return try await withCheckedThrowingContinuation { cont in
-            self.locationContinuation = cont
-            self.manager.requestLocation()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { cont in
+                self.locationContinuation = cont
+                self.manager.requestLocation()
+            }
+        } onCancel: {
+            // Caller's Task was cancelled. Hop to the main actor and resume the
+            // pending continuation with CancellationError so it isn't leaked.
+            Task { @MainActor in
+                self.locationContinuation?.resume(throwing: CancellationError())
+                self.locationContinuation = nil
+            }
         }
     }
 

@@ -12,14 +12,19 @@ final class AuthSession {
 
     private(set) var state: State = .loading
 
-    init() {
-        Task { await listen() }
-    }
+    /// App-lifetime task subscribed to auth state changes. Held so the
+    /// intent ("singleton, never cancelled") is explicit rather than the
+    /// task hanging implicitly off init.
+    private var listener: Task<Void, Never>?
 
-    private func listen() async {
-        // First emission yields the restored session (or nil) immediately.
-        for await (_, session) in supabase.auth.authStateChanges {
-            state = session.flatMap { .signedIn($0.user) } ?? .signedOut
+    init() {
+        listener = Task { [weak self] in
+            // First emission yields the restored session (or nil) immediately.
+            // weak self lets the loop exit naturally when AuthSession is released.
+            for await (_, session) in supabase.auth.authStateChanges {
+                guard let self else { return }
+                self.state = session.flatMap { .signedIn($0.user) } ?? .signedOut
+            }
         }
     }
 
