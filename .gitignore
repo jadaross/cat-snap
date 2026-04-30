@@ -35,3 +35,5 @@ fastlane/test_output
 # Local config — secrets stay out of git, examples are committed
 *.xcconfig
 !*.example.xcconfig
+
+.agents/*

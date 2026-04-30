@@ -180,7 +180,7 @@ private struct ProfileRow: View {
                     .font(.Brand.jakarta(.bold, size: 14))
                     .foregroundStyle(Color.ink)
                     .lineLimit(1)
-                Text("@\(profile.username)".uppercased())
+                Text("@\(profile.username)")
                     .font(.Brand.mono(size: 10))
                     .tracking(0.4)
                     .foregroundStyle(Color.stone)

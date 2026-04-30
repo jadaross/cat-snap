@@ -82,9 +82,6 @@ struct SubmitView: View {
 
             VStack(spacing: 0) {
                 cameraTopBar
-                tipCard
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
                 Spacer()
                 modeSelector
                     .padding(.bottom, 24)
@@ -126,31 +123,6 @@ struct SubmitView: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
-    }
-
-    private var tipCard: some View {
-        HStack(spacing: 10) {
-            ZStack {
-                Circle().fill(Color.coral.opacity(0.18))
-                CatWindowMark(size: 20, showSill: false)
-            }
-            .frame(width: 30, height: 30)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("snap a sighting")
-                    .font(.Brand.jakarta(.bold, size: 13))
-                    .foregroundStyle(Color.ink)
-                Text("photo will be tagged with your location.")
-                    .font(.Brand.jakarta(.regular, size: 11))
-                    .foregroundStyle(Color.stone)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(Color.creamSoft.opacity(0.97), in: .rect(cornerRadius: 14))
-        .shadow(color: Color.ink.opacity(0.4), radius: 8, y: 6)
     }
 
     private var modeSelector: some View {

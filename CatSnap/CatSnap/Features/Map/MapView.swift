@@ -87,6 +87,10 @@ struct MapView: View {
             span: MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
         )
     )
+    @State private var mapRegion: MKCoordinateRegion = MKCoordinateRegion(
+        center: .london,
+        span: MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
+    )
 
     private static let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
 
@@ -128,6 +132,7 @@ struct MapView: View {
             }
             .mapStyle(.standard(elevation: .flat))
             .onMapCameraChange(frequency: .onEnd) { context in
+                mapRegion = context.region
                 Task {
                     let centre = context.region.center
                     let radius = max(context.region.span.latitudeDelta, context.region.span.longitudeDelta) * 111_000
@@ -184,10 +189,13 @@ struct MapView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
 
-                HStack {
+                HStack(alignment: .top) {
                     timeFilterRow
                     Spacer()
-                    recenterButton
+                    VStack(spacing: 8) {
+                        recenterButton
+                        zoomButtons
+                    }
                 }
                 .padding(.horizontal, 16)
                 Spacer()
@@ -229,6 +237,31 @@ struct MapView: View {
                 .background(Color.creamSoft, in: .circle)
                 .shadow(color: Color.ink.opacity(0.18), radius: 6, y: 2)
         }
+        .accessibilityLabel("recenter map")
+    }
+
+    private var zoomButtons: some View {
+        VStack(spacing: 0) {
+            Button { zoom(factor: 0.5) } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.coral)
+                    .frame(width: 44, height: 44)
+            }
+            .accessibilityLabel("zoom in")
+            Rectangle()
+                .fill(Color.stoneLight)
+                .frame(width: 28, height: 1)
+            Button { zoom(factor: 2.0) } label: {
+                Image(systemName: "minus")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.coral)
+                    .frame(width: 44, height: 44)
+            }
+            .accessibilityLabel("zoom out")
+        }
+        .background(Color.creamSoft, in: .rect(cornerRadius: 12))
+        .shadow(color: Color.ink.opacity(0.18), radius: 6, y: 2)
     }
 
     private var emptyStateCard: some View {
@@ -277,6 +310,18 @@ struct MapView: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func zoom(factor: Double) {
+        let newSpan = MKCoordinateSpan(
+            latitudeDelta: min(max(mapRegion.span.latitudeDelta * factor, 0.001), 120),
+            longitudeDelta: min(max(mapRegion.span.longitudeDelta * factor, 0.001), 120)
+        )
+        let newRegion = MKCoordinateRegion(center: mapRegion.center, span: newSpan)
+        mapRegion = newRegion
+        withAnimation {
+            cameraPosition = .region(newRegion)
+        }
     }
 
     private func focus(on sighting: NearbySighting) {

@@ -105,7 +105,8 @@ struct GuideListView: View {
                     ForEach(visibleCats) { cat in
                         GuideCatCell(
                             cat: cat,
-                            isSpotted: model.spottedCatIds.contains(cat.id)
+                            isSpotted: model.spottedCatIds.contains(cat.id),
+                            spotPhotoUrl: model.catIdToPhotoUrl[cat.id]
                         )
                         .onTapGesture {
                             // Only push the profile for cats the user has actually
@@ -198,6 +199,7 @@ private struct FilterChip: View {
 private struct GuideCatCell: View {
     let cat: Cat
     let isSpotted: Bool
+    let spotPhotoUrl: URL?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -241,20 +243,18 @@ private struct GuideCatCell: View {
 
     @ViewBuilder
     private var photo: some View {
-        if isSpotted, let url = cat.primaryPhotoUrl {
-            AsyncCatImage(url: url)
-                .aspectRatio(1, contentMode: .fill)
-                .clipShape(.rect(topLeadingRadius: 12, topTrailingRadius: 12))
-        } else {
-            ZStack {
-                Color.creamDeep
-                Text("?")
-                    .font(.Brand.frauncesBlackItalic(size: 28))
-                    .foregroundStyle(Color.stone)
-            }
+        Color.creamDeep
             .aspectRatio(1, contentMode: .fit)
+            .overlay {
+                if isSpotted, let url = cat.primaryPhotoUrl ?? spotPhotoUrl {
+                    AsyncCatImage(url: url)
+                } else {
+                    Text("?")
+                        .font(.Brand.frauncesBlackItalic(size: 28))
+                        .foregroundStyle(Color.stone)
+                }
+            }
             .clipShape(.rect(topLeadingRadius: 12, topTrailingRadius: 12))
-        }
     }
 
     private var displayName: String {
