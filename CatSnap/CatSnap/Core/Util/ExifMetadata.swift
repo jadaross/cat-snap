@@ -25,6 +25,13 @@ enum ExifMetadata {
         return result
     }
 
+    private static let exifDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy:MM:dd HH:mm:ss"
+        f.timeZone = TimeZone.current
+        return f
+    }()
+
     private static func parseDate(from props: [CFString: Any]) -> Date? {
         guard let exif = props[kCGImagePropertyExifDictionary] as? [CFString: Any] else {
             return nil
@@ -33,11 +40,8 @@ enum ExifMetadata {
             kCGImagePropertyExifDateTimeOriginal,
             kCGImagePropertyExifDateTimeDigitized
         ]
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
-        formatter.timeZone = TimeZone.current
         for key in candidates {
-            if let raw = exif[key] as? String, let date = formatter.date(from: raw) {
+            if let raw = exif[key] as? String, let date = exifDateFormatter.date(from: raw) {
                 return date
             }
         }

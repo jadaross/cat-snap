@@ -94,6 +94,10 @@ struct MapView: View {
 
     private static let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
 
+    /// Rough conversion: at the equator, 1 degree of latitude ≈ 111 km.
+    /// Good enough for picking a fetch radius from a map span.
+    private static let metersPerDegree = 111_000.0
+
     private var filteredSightings: [NearbySighting] {
         model.sightings.filter { timeFilter.includes($0.seenAt) }
     }
@@ -135,7 +139,7 @@ struct MapView: View {
                 mapRegion = context.region
                 Task {
                     let centre = context.region.center
-                    let radius = max(context.region.span.latitudeDelta, context.region.span.longitudeDelta) * 111_000
+                    let radius = max(context.region.span.latitudeDelta, context.region.span.longitudeDelta) * Self.metersPerDegree
                     await model.fetchIfNeeded(centre: centre, radiusMeters: max(radius, 1_000))
                 }
             }
