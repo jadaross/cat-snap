@@ -28,8 +28,9 @@ struct FriendsActivityView: View {
         .toolbar(.hidden, for: .navigationBar)
         .ignoresSafeArea(edges: .top)
         .task {
-            await model.loadFriends()
-            await model.loadActivity()
+            async let friends: Void = model.loadFriends()
+            async let activity: Void = model.loadActivity()
+            _ = await (friends, activity)
         }
     }
 

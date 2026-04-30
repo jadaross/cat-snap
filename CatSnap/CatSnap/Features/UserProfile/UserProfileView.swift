@@ -36,9 +36,10 @@ struct UserProfileView: View {
                 CatProfileView(catId: catId)
             }
             .task {
-                await model.load()
-                await friendsModel.loadFriends()
-                await friendsModel.loadActivity(limit: 6)
+                async let profile: Void = model.load()
+                async let friends: Void = friendsModel.loadFriends()
+                async let activity: Void = friendsModel.loadActivity(limit: 6)
+                _ = await (profile, friends, activity)
             }
         }
     }
