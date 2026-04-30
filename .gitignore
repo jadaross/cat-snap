@@ -36,4 +36,6 @@ fastlane/test_output
 *.xcconfig
 !*.example.xcconfig
 
+# Claude Code agent session state
 .agents/*
+skills-lock.json
