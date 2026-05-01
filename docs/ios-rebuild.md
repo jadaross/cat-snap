@@ -19,7 +19,9 @@ The plan for rebuilding Cat-Snap as a native SwiftUI iOS app — checked into hi
 | 1 | Foundations: branding, new Supabase, repo cleanup | ✅ Done |
 | 2 | Walking skeleton: SwiftUI + Supabase auth + first round-trip | ✅ Done |
 | 3 | MVP feature parity: map, submit, profiles | ✅ Done |
-| 4 | TestFlight | **← here** |
+| 3.5 | Beyond-MVP: explore guide, friends, streaks, onboarding | ✅ Done |
+| 4 | Pre-release hardening + TestFlight | **← here** |
+| 5 | App Store submission | Not started |
 
 ## Phase 1 — Done
 
@@ -83,28 +85,99 @@ Shipped:
 - **User profile** — avatar, display name, stats, my-sightings grid, `EditProfileSheet` for changing display name + avatar (uploads to `avatars` bucket, updates `profiles.avatar_url`), sign-out in the toolbar.
 - **Cross-cutting primitives** — `RarityBadge`, `TagChip` (with the 12 preset tags from the design canvas), `AsyncCatImage` (cream-deep placeholder + brand-mark fallback), `SightingThumbnail` (square cell with a relative-time stamp).
 
-Deferred to v2 (intentionally not built):
-- Friend system, follows, reactions, comments, merge_requests
-- Push notifications, badges, streaks, leaderboard
+## Phase 3.5 — Beyond-MVP (also done, ahead of original plan)
+
+Several features that were originally deferred to v2 shipped opportunistically once the MVP loop felt complete:
+
+- **Friends** — one-way follow graph (`public.follows` + `friend_activity` / `my_friends` / `search_profiles` RPCs). UI: `AddFriendsView`, friends section on profile, activity feed (`FriendsActivityView` + `FriendActivityRow`).
+- **Explore field-guide** — grid of all known cats with locked silhouettes for unspotted ones, progress, filters (`Features/Explore/`).
+- **Streaks + awards** — locally-computed daily streak heatmap and awards grid on the user profile.
+- **Onboarding** — full multi-step flow: welcome → how-it-works → avatar pick → on-the-map demo → spotted demo → camera/location/notifications permissions → first-snap (`Features/Onboarding/`).
+- **EXIF-aware uploads** — submit flow respects orientation + extracts capture date from camera-roll photos.
+
+Still deferred to v2 (intentionally not built):
+- Reactions, comments, merge_requests
+- Push notifications (permission is requested in onboarding but no APNs payload handler yet)
+- Real `badges` table (UI uses locally-computed awards)
+- Leaderboard
 - Per-sighting visibility, TNR/caretaker flags on cats
 - Notes field on sightings
-- AI cat-matching at submit time (Phase 4 / v3 territory)
+- AI cat-matching at submit time (v3 territory)
 
-## Phase 4 — TestFlight
+## Phase 4 — Pre-release hardening + TestFlight
 
-This is mostly your work — the things that need an Apple Developer account.
+You have the Apple Developer account ✅. Below is the actual pre-release checklist — gates first, then the things that block App Store review specifically, then nice-to-haves.
 
-1. **Apple Developer account** ($99/yr): https://developer.apple.com/programs/enroll/
-2. **App Store Connect** record: register the bundle id `com.jadaross.CatSnap`, set name + subtitle ("spot every cat.") + description.
-3. **App icon**: 1024×1024 PNG, no transparency, no rounded corners. Master at `docs/icon-master.png` once exported. Add to `Assets.xcassets/AppIcon.appiconset/`.
-4. **Sign in with Apple**:
-   - Xcode → CatSnap target → **Signing & Capabilities** → `+` → Sign in with Apple
-   - Supabase Dashboard → Authentication → Providers → Apple → enable, fill in Service ID + key
-   - Add a "Sign in with Apple" button to `AuthView` using `SignInWithAppleButton` from AuthenticationServices
-5. **Re-enable email confirmation** in Supabase Auth + configure SMTP (Resend or Postmark) so confirmation mails reach Hotmail/Outlook reliably.
-6. **Privacy strings audit** — already have NSCamera, NSLocationWhenInUse, NSPhotoLibrary descriptions. Add NSUserTrackingUsageDescription if any analytics get wired later.
-7. **Archive + upload** — Xcode → Product → Archive → distribute to TestFlight.
-8. **Invite test flight users** by email in App Store Connect.
+### A. App Store review gates (App Store Review Guidelines)
+
+These will get the app **rejected** if missing. Do these before submitting, not after.
+
+1. **Account deletion in-app** (Guideline 5.1.1(v))
+   Any app that supports account creation must let the user delete their account from inside the app — not just sign out, not just "email us". Implement:
+   - Settings entry on `UserProfile` → "Delete account" → confirm sheet → Supabase Edge Function (service-role) that cascades: deletes the `auth.users` row (FKs cascade to `profiles` / `sightings` / `follows`).
+   - Storage objects in `sighting-photos` and `avatars` owned by that user need explicit cleanup — Postgres FKs don't reach into Storage. Either iterate + delete in the Edge Function, or schedule a janitor.
+2. **UGC moderation** (Guideline 1.2)
+   Cat-Snap is a photo-UGC app, so all four are required:
+   - **Report content** — long-press / overflow menu on a sighting → "Report" sheet with categories (spam, abuse, inappropriate, copyright). Writes to a `reports` table; you triage manually for v1.
+   - **Block users** — from another user's profile → "Block". Blocked users' content is hidden from the blocker (filter in `sightings_near` and the activity feed RPCs); blocked users can't follow or interact.
+   - **Filter for objectionable content** — at minimum a per-user list of blocked users. Stronger: server-side photo moderation (Cloud Vision SafeSearch / OpenAI moderation via Edge Function on upload). For v1 pre-moderation can be lighter, but the report → 24h triage commitment must be real.
+   - **Contact for resolution** — published email (e.g. `support@catsnap.app`) reachable from the in-app Settings screen *and* in the App Store listing. Reports must be actioned within 24 hours per Apple's guideline.
+3. **Sign in with Apple** (Guideline 4.8)
+   Required if you offer any third-party login. With email/password only, technically not required — but if you add Google/Facebook later it becomes mandatory, and reviewers like to see it. Steps:
+   - Xcode → CatSnap target → **Signing & Capabilities** → `+ Capability` → Sign in with Apple.
+   - Supabase Dashboard → Authentication → Providers → Apple → enable, paste the Service ID + key (created in the Apple Developer console).
+   - Add `SignInWithAppleButton` (from `AuthenticationServices`) to `AuthView`, wire to `supabase.auth.signInWithIdToken(...)`.
+4. **Privacy policy + Terms of Service**
+   App Store Connect requires a public privacy policy URL. Host it on a static page (e.g. GitHub Pages or a one-pager on `catsnap.app`). Cover: what data is collected (email, photos, GPS, profile info), why, retention, deletion path, third parties (Supabase as processor), contact email. Link from in-app Settings.
+5. **App Privacy "nutrition labels"**
+   In App Store Connect → App Privacy, declare: email + name (Account), Photos, Coarse Location, User-Generated Content. Linked-to-identity = yes for all. No tracking.
+
+### B. Production-readiness (stuff that bites if skipped)
+
+6. **Re-enable email confirmation + configure SMTP**
+   Supabase Auth → toggle email confirmation back on. Default Supabase SMTP is rate-limited and goes to spam — wire a real provider (Resend or Postmark, ~£0/month at this volume). Customise the confirmation email template with brand colours + wordmark.
+7. **App icon**
+   `Assets.xcassets/AppIcon.appiconset/Contents.json` exists with universal/dark/tinted slots but **no PNG files**. Export 1024×1024 PNGs (no transparency, no rounded corners; iOS adds the radius) for all three appearances. Master goes at `docs/icon-master.png`.
+8. **Crash + error reporting**
+   Wire Sentry (free tier) via SPM. Catch unhandled exceptions and log Supabase RPC errors. Without this you fly blind on TestFlight.
+9. **Permission denial UX**
+   Walk every flow assuming the user said "Don't Allow" once and now wants to re-grant. The denial recovery path needs a "Open Settings" button (`UIApplication.openSettingsURLString`) on each of: camera, location, photo library, notifications.
+10. **Bundle ID + signing**
+    Xcode → target → Signing & Capabilities → assign Apple Developer team, confirm bundle id `com.jadaross.CatSnap` registered in App Store Connect.
+11. **Empty / error / offline states**
+    Audit map, explore, profile, friends activity. Each needs a non-broken empty state and a graceful "couldn't load — retry" state. No raw `Error.localizedDescription` shown to users.
+12. **Rate limits + abuse mitigation** (Postgres-side)
+    - Per-user submit cap (e.g. 50 sightings / day) via a constraint or RPC guard.
+    - Per-user follow cap (e.g. 1000) to limit spam graphs.
+    - Photo size cap enforced server-side, not just client-side.
+13. **Leaked-password protection** — Supabase → Authentication → Policies → toggle on (one click).
+
+### C. App Store Connect prep (do once, in parallel with above)
+
+14. **App Store Connect record** — bundle id `com.jadaross.CatSnap`, name "Cat-Snap", subtitle "spot every cat.", primary category Photo & Video (secondary Social Networking), age rating 4+ (with UGC + location disclosures answered honestly).
+15. **Description + keywords** — 4000-char description, 100-char keyword list. Draft in `docs/app-store-copy.md` so it's reviewable / iterable.
+16. **Screenshots** — 6.7" iPhone Pro Max + 6.1" iPhone (required), iPad optional if you support it. 5–8 screenshots each. Use real fixtures (real cats, real map). Include a marketing-text overlay on each.
+17. **Preview video** (optional but converts better) — 15–30s, recorded on simulator with `xcrun simctl io booted recordVideo`.
+18. **Support URL** — same static site as the privacy policy.
+
+### D. Nice-to-have before public launch (skip for first TestFlight build)
+
+19. **iPad support** — currently iPhone-only feels right; explicitly set `TARGETED_DEVICE_FAMILY = 1` so the App Store doesn't list it as iPad-compatible.
+20. **Push notifications** — onboarding asks for the permission but nothing sends pushes yet. Wire APNs + a Supabase Edge Function trigger on `friend_activity` ("Alex spotted a cat near you") once the basics ship.
+21. **Universal Links / share sheet** — share a cat profile or a sighting via `catsnap.app/cat/<id>`; currently no out-of-app surface.
+22. **Accessibility pass** — VoiceOver labels on `CatPin`, `RarityBadge`, `SightingThumbnail`; Dynamic Type honoured in cards; contrast check on coral-on-cream.
+23. **Localization scaffolding** — wrap user-facing strings in `String(localized:)` even if only en is shipped, so v2 can add languages without a refactor.
+24. **NSUserTrackingUsageDescription** — only needed if analytics/ads get wired. Skip until it's actually true.
+
+### E. Ship sequence
+
+1. Land A1 (account deletion) and A2 (report/block) — these are real code, not toggles.
+2. Land B6 (email confirm + SMTP), B7 (icon), B8 (Sentry), B9 (permission denial UX).
+3. Host privacy policy + terms (A4).
+4. Internal TestFlight build → use it on your own phone for a week.
+5. External TestFlight (≤100 testers, no review needed for friends/family).
+6. Address feedback, iterate.
+7. App Store submission (C14–C18).
 
 ## Tech stack (locked)
 
@@ -125,6 +198,5 @@ This is mostly your work — the things that need an Apple Developer account.
 
 ## Outstanding optional dashboard tasks
 
-- **Enable leaked password protection** — Authentication → Policies → toggle on. One click.
-- **Re-enable email confirmation + configure SMTP** before TestFlight (was disabled during Phase 2 to unblock dev signup).
 - **Push the git tag** when convenient: `git push origin v1.0.2-web-final`.
+- (The Supabase dashboard items — leaked-password protection and email confirmation/SMTP — are now tracked under Phase 4 above as B6 and B13.)
