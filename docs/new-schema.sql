@@ -133,7 +133,8 @@ create index sighting_tags_tag_idx on public.sighting_tags(tag);
 
 -- ============================================================
 -- 5. RPC: sightings_near
--- Called from the iOS map view to fetch pins in the visible region
+-- Called from the iOS map view to fetch pins in the visible region.
+-- Filters symmetric block pairs (see section 8 / migration 0002).
 -- ============================================================
 create or replace function public.sightings_near(
   p_lat    double precision,
@@ -159,7 +160,9 @@ returns table (
   avatar_url      text,
   distance_m      double precision
 )
-language sql stable as $$
+language sql stable
+set search_path to 'public', 'pg_temp'
+as $$
   select
     s.id,
     s.user_id,
@@ -184,6 +187,11 @@ language sql stable as $$
     s.location,
     ST_MakePoint(p_lng, p_lat)::geography,
     p_radius
+  )
+  and not exists (
+    select 1 from public.blocks b
+    where (b.blocker_id = (select auth.uid()) and b.blocked_id = s.user_id)
+       or (b.blocker_id = s.user_id and b.blocked_id = (select auth.uid()))
   )
   order by s.seen_at desc
   limit p_limit;
@@ -250,4 +258,67 @@ create policy "Sighting owner can delete tags" on public.sighting_tags
 --     SELECT: true
 --     INSERT: auth.role() = 'authenticated'
 --     UPDATE/DELETE: owner = auth.uid()
+-- ============================================================
+
+-- ============================================================
+-- 8. UGC MODERATION (Apple App Store Guideline 1.2)
+-- Mirrors supabase/migrations/0001_blocks_and_reports.sql.
+-- Keep this section and the migration file in sync.
+-- ============================================================
+
+-- blocks: directed; the read-side RPCs filter symmetrically.
+create table public.blocks (
+  blocker_id uuid not null references public.profiles(id) on delete cascade,
+  blocked_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz default now(),
+  primary key (blocker_id, blocked_id),
+  check (blocker_id <> blocked_id)
+);
+create index blocks_blocked_id_idx on public.blocks(blocked_id);
+
+alter table public.blocks enable row level security;
+create policy "Users see their own blocks" on public.blocks
+  for select using ((select auth.uid()) = blocker_id);
+create policy "Users create their own blocks" on public.blocks
+  for insert with check ((select auth.uid()) = blocker_id);
+create policy "Users delete their own blocks" on public.blocks
+  for delete using ((select auth.uid()) = blocker_id);
+
+-- reports: append-only from clients; admins triage via the dashboard.
+create type public.report_target as enum ('sighting', 'profile', 'cat');
+create type public.report_reason as enum ('spam', 'inappropriate', 'abuse', 'copyright', 'other');
+create type public.report_status as enum ('open', 'actioned', 'dismissed');
+
+create table public.reports (
+  id           uuid primary key default gen_random_uuid(),
+  reporter_id  uuid not null references public.profiles(id) on delete cascade,
+  target_type  public.report_target not null,
+  target_id    uuid not null,
+  reason       public.report_reason not null,
+  details      text,
+  status       public.report_status not null default 'open',
+  created_at   timestamptz default now(),
+  resolved_at  timestamptz
+);
+create index reports_status_idx on public.reports(status, created_at desc);
+create index reports_target_idx on public.reports(target_type, target_id);
+
+alter table public.reports enable row level security;
+create policy "Reporters can read their own reports" on public.reports
+  for select using ((select auth.uid()) = reporter_id);
+create policy "Authenticated users can submit reports" on public.reports
+  for insert with check ((select auth.uid()) = reporter_id);
+
+-- ============================================================
+-- 9. ACCOUNT DELETION
+-- Apple App Store Guideline 5.1.1(v) requires in-app account deletion.
+-- The destructive work happens in the `delete-account` edge function
+-- (see supabase/functions/delete-account/), which:
+--   1. authenticates the caller via JWT
+--   2. removes every storage object under sighting-photos/<uid>/ and
+--      avatars/<uid>/
+--   3. calls auth.admin.deleteUser, which cascades through profiles,
+--      sightings, sighting_tags, follows, blocks, reports
+-- No DDL is required for account deletion itself; the existing FKs do
+-- the cascading work once the auth.users row is removed.
 -- ============================================================

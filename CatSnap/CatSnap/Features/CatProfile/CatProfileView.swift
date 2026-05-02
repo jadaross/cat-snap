@@ -4,6 +4,7 @@ struct CatProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model: CatProfileModel
     @State private var isSubmitPresented = false
+    @State private var reportTarget: ReportTarget?
 
     init(catId: UUID) {
         _model = State(initialValue: CatProfileModel(catId: catId))
@@ -20,6 +21,9 @@ struct CatProfileView: View {
         .task { await model.load() }
         .fullScreenCover(isPresented: $isSubmitPresented) {
             SubmitView(prefilledCatId: model.catId)
+        }
+        .sheet(item: $reportTarget) { target in
+            ReportSheet(target: target)
         }
     }
 
@@ -111,12 +115,18 @@ struct CatProfileView: View {
                     .background(.ultraThinMaterial, in: .circle)
             }
             Spacer()
-            Image(systemName: "ellipsis")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(Color.creamSoft)
-                .frame(width: 40, height: 40)
-                .background(Color.ink.opacity(0.4), in: .circle)
-                .background(.ultraThinMaterial, in: .circle)
+            Menu {
+                Button("Report this cat", role: .destructive) {
+                    reportTarget = .cat(model.catId)
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.creamSoft)
+                    .frame(width: 40, height: 40)
+                    .background(Color.ink.opacity(0.4), in: .circle)
+                    .background(.ultraThinMaterial, in: .circle)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 56) // safe-area approximation; exact layout via .ignoresSafeArea(.top)

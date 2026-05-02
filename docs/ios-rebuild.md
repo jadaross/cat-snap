@@ -112,16 +112,17 @@ You have the Apple Developer account ✅. Below is the actual pre-release checkl
 
 These will get the app **rejected** if missing. Do these before submitting, not after.
 
-1. **Account deletion in-app** (Guideline 5.1.1(v))
-   Any app that supports account creation must let the user delete their account from inside the app — not just sign out, not just "email us". Implement:
-   - Settings entry on `UserProfile` → "Delete account" → confirm sheet → Supabase Edge Function (service-role) that cascades: deletes the `auth.users` row (FKs cascade to `profiles` / `sightings` / `follows`).
-   - Storage objects in `sighting-photos` and `avatars` owned by that user need explicit cleanup — Postgres FKs don't reach into Storage. Either iterate + delete in the Edge Function, or schedule a janitor.
-2. **UGC moderation** (Guideline 1.2)
-   Cat-Snap is a photo-UGC app, so all four are required:
-   - **Report content** — long-press / overflow menu on a sighting → "Report" sheet with categories (spam, abuse, inappropriate, copyright). Writes to a `reports` table; you triage manually for v1.
-   - **Block users** — from another user's profile → "Block". Blocked users' content is hidden from the blocker (filter in `sightings_near` and the activity feed RPCs); blocked users can't follow or interact.
-   - **Filter for objectionable content** — at minimum a per-user list of blocked users. Stronger: server-side photo moderation (Cloud Vision SafeSearch / OpenAI moderation via Edge Function on upload). For v1 pre-moderation can be lighter, but the report → 24h triage commitment must be real.
-   - **Contact for resolution** — published email (e.g. `support@catsnap.app`) reachable from the in-app Settings screen *and* in the App Store listing. Reports must be actioned within 24 hours per Apple's guideline.
+1. **Account deletion in-app** (Guideline 5.1.1(v)) — ✅ shipped
+   Implementation:
+   - `Features/UserProfile/SettingsSheet.swift` — settings menu entry routed from the gear icon on `UserProfile` opens a sheet with a destructive "Delete account" row + confirmation dialog.
+   - `Core/Supabase/AccountDeletion.swift` — invokes the `delete-account` edge function and clears the local session.
+   - `supabase/functions/delete-account/index.ts` — uses the service-role key to remove every storage object under `sighting-photos/<uid>/` and `avatars/<uid>/`, then `auth.admin.deleteUser`. Postgres FKs cascade through `profiles` → `sightings` → `sighting_tags`, plus `follows` / `blocks` / `reports`.
+   - **Before App Store submission:** deploy the function (`supabase functions deploy delete-account`) and replace the `support@catsnap.app` / privacy / terms placeholders in `SettingsSheet.swift` with live values.
+2. **UGC moderation** (Guideline 1.2) — ✅ shipped
+   - **Report content** — overflow `…` menu surfaces on `CatProfileView` (cat-level), `FriendsActivityView` `FeedCard` (sighting-level), and `PinDetailCard` (map sighting-level). Sheet: `Features/Moderation/ReportSheet.swift`. Writes to `public.reports` (migration `0001`); admins triage via the dashboard.
+   - **Block users** — same overflow menus on the sighting / map surfaces. Inserts into `public.blocks` via `FriendsModel.block`. The four read-side RPCs (`sightings_near`, `friend_activity`, `my_friends`, `search_profiles`) are amended in migration `0002` to filter symmetric block pairs server-side.
+   - **Filter for objectionable content** — per-user block list (above) is the v1 minimum. Server-side photo moderation is queued for v2.
+   - **Contact for resolution** — `SettingsSheet` exposes a "Contact support" mailto row. Email address + privacy/terms URLs are placeholders pending real values.
 3. **Sign in with Apple** (Guideline 4.8)
    Required if you offer any third-party login. With email/password only, technically not required — but if you add Google/Facebook later it becomes mandatory, and reviewers like to see it. Steps:
    - Xcode → CatSnap target → **Signing & Capabilities** → `+ Capability` → Sign in with Apple.

@@ -7,6 +7,7 @@ import SwiftUI
 struct FriendsActivityView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model = FriendsModel()
+    @State private var reportTarget: ReportTarget?
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -31,6 +32,9 @@ struct FriendsActivityView: View {
             async let friends: Void = model.loadFriends()
             async let activity: Void = model.loadActivity()
             _ = await (friends, activity)
+        }
+        .sheet(item: $reportTarget) { target in
+            ReportSheet(target: target)
         }
     }
 
@@ -112,7 +116,13 @@ struct FriendsActivityView: View {
             } else {
                 VStack(spacing: 10) {
                     ForEach(model.activity) { sighting in
-                        FeedCard(sighting: sighting)
+                        FeedCard(
+                            sighting: sighting,
+                            onReport: { reportTarget = .sighting(sighting.id) },
+                            onBlock: {
+                                Task { try? await model.block(userId: sighting.userId) }
+                            }
+                        )
                     }
                 }
                 .padding(.horizontal, 16)
@@ -138,6 +148,8 @@ struct FriendsActivityView: View {
 
 private struct FeedCard: View {
     let sighting: NearbySighting
+    var onReport: () -> Void
+    var onBlock: () -> Void
 
     var body: some View {
         // The card itself is non-tappable for this view; tapping the cat
@@ -164,6 +176,17 @@ private struct FeedCard: View {
                     .lineLimit(1)
             }
             Spacer(minLength: 0)
+
+            Menu {
+                Button("Report this sighting", role: .destructive, action: onReport)
+                Button("Block @\(sighting.username)", role: .destructive, action: onBlock)
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.stone)
+                    .frame(width: 28, height: 28)
+                    .contentShape(.rect)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)

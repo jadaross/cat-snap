@@ -77,10 +77,12 @@ enum TimeFilter: String, CaseIterable, Hashable {
 struct MapView: View {
     @Binding var exploreView: ExploreSubview
     @State private var model = MapModel()
+    @State private var friendsModel = FriendsModel()
     @State private var locationManager = LocationManager()
     @State private var selectedSighting: NearbySighting?
     @State private var path = NavigationPath()
     @State private var timeFilter: TimeFilter = .all
+    @State private var reportTarget: ReportTarget?
     @State private var cameraPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
             center: .london,
@@ -146,11 +148,22 @@ struct MapView: View {
             .ignoresSafeArea(edges: .bottom)
 
             if let selected = selectedSighting {
-                PinDetailCard(sighting: selected) {
-                    if let catId = selected.catId {
-                        path.append(catId)
+                PinDetailCard(
+                    sighting: selected,
+                    onTapToOpen: {
+                        if let catId = selected.catId {
+                            path.append(catId)
+                        }
+                    },
+                    onReport: { reportTarget = .sighting(selected.id) },
+                    onBlock: {
+                        Task {
+                            try? await friendsModel.block(userId: selected.userId)
+                            selectedSighting = nil
+                            await model.refresh()
+                        }
                     }
-                }
+                )
                 .padding(.horizontal, 16)
                 .padding(.bottom, 96)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -212,6 +225,9 @@ struct MapView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .sightingSubmitted)) { _ in
             Task { await model.refresh() }
+        }
+        .sheet(item: $reportTarget) { target in
+            ReportSheet(target: target)
         }
     }
 

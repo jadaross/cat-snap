@@ -9,6 +9,7 @@ struct UserProfileView: View {
     @State private var model = UserProfileModel()
     @State private var friendsModel = FriendsModel()
     @State private var isEditPresented = false
+    @State private var isSettingsPresented = false
     @State private var path = NavigationPath()
 
     enum Route: Hashable {
@@ -111,6 +112,9 @@ struct UserProfileView: View {
                 }
             }
         }
+        .sheet(isPresented: $isSettingsPresented) {
+            SettingsSheet()
+        }
     }
 
     // MARK: - Coral header
@@ -129,6 +133,7 @@ struct UserProfileView: View {
                 Spacer()
                 Menu {
                     Button("edit profile") { isEditPresented = true }
+                    Button("settings") { isSettingsPresented = true }
                     Button("sign out", role: .destructive) {
                         Task { try? await session.signOut() }
                     }

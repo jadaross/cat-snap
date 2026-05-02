@@ -3,15 +3,38 @@ import SwiftUI
 struct PinDetailCard: View {
     let sighting: NearbySighting
     var onTapToOpen: (() -> Void)? = nil
+    var onReport: (() -> Void)? = nil
+    var onBlock: (() -> Void)? = nil
 
     private var isOpenable: Bool { sighting.catId != nil }
 
     var body: some View {
-        if isOpenable {
-            Button(action: { onTapToOpen?() }) { card }
-                .buttonStyle(.plain)
-        } else {
-            card
+        ZStack(alignment: .topTrailing) {
+            if isOpenable {
+                Button(action: { onTapToOpen?() }) { card }
+                    .buttonStyle(.plain)
+            } else {
+                card
+            }
+
+            if onReport != nil || onBlock != nil {
+                Menu {
+                    if let onReport {
+                        Button("Report this sighting", role: .destructive, action: onReport)
+                    }
+                    if let onBlock {
+                        Button("Block @\(sighting.username)", role: .destructive, action: onBlock)
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.stone)
+                        .frame(width: 28, height: 28)
+                        .contentShape(.rect)
+                }
+                .padding(.top, 4)
+                .padding(.trailing, 4)
+            }
         }
     }
 
@@ -50,6 +73,10 @@ struct PinDetailCard: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.stone)
+                    // leave room for the corner Menu
+                    .padding(.trailing, 24)
+            } else {
+                Color.clear.frame(width: 24, height: 1)
             }
         }
         .padding(12)

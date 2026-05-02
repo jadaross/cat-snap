@@ -65,4 +65,48 @@ final class FriendsModel {
             .execute()
             .value
     }
+
+    func block(userId: UUID) async throws {
+        let me = try await supabase.auth.session.user.id
+        struct Row: Encodable { let blocker_id: UUID; let blocked_id: UUID }
+        try await supabase
+            .from("blocks")
+            .insert(Row(blocker_id: me, blocked_id: userId))
+            .execute()
+        // The RPCs filter symmetrically server-side, but mirror the change
+        // locally so the UI updates without a re-fetch.
+        activity.removeAll { $0.userId == userId }
+        friends.removeAll { $0.userId == userId }
+    }
+
+    func unblock(userId: UUID) async throws {
+        let me = try await supabase.auth.session.user.id
+        try await supabase
+            .from("blocks")
+            .delete()
+            .eq("blocker_id", value: me)
+            .eq("blocked_id", value: userId)
+            .execute()
+    }
+
+    func report(targetType: String, targetId: UUID, reason: String, details: String?) async throws {
+        let me = try await supabase.auth.session.user.id
+        struct Row: Encodable {
+            let reporter_id: UUID
+            let target_type: String
+            let target_id: UUID
+            let reason: String
+            let details: String?
+        }
+        try await supabase
+            .from("reports")
+            .insert(Row(
+                reporter_id: me,
+                target_type: targetType,
+                target_id: targetId,
+                reason: reason,
+                details: details
+            ))
+            .execute()
+    }
 }
