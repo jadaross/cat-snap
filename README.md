@@ -6,7 +6,7 @@
 
 ## Status
 
-iOS rebuild is feature-complete for v1 — map, submit-sighting, cat + user profiles, and a one-way friend graph all ship from `main`. Currently in Phase 4: prepping for TestFlight (Apple Developer enrolment, Sign in with Apple, app icon, email-confirmation SMTP).
+iOS rebuild is feature-complete for v1 — map, submit-sighting, cat + user profiles, friends graph, explore guide, streaks, onboarding, and Apple's UGC review gates (account deletion, block + report) all ship from `main`. The remaining pre-launch work — Swift sweep, Snyk security audit, UI/UX pass, App Store gates — is tracked in [`docs/launch-checklist.md`](docs/launch-checklist.md).
 
 The original Next.js web app has been retired and is preserved at git tag `v1.0.2-web-final`. The new schema, branding, and Supabase project are unrelated to it.
 
@@ -25,14 +25,10 @@ Supabase credentials are read at runtime from `CatSnap/CatSnap/CatSnap.xcconfig`
 
 ## Where things are
 
-- **App source** → [`CatSnap/CatSnap/`](CatSnap/CatSnap) — `Core/` (Supabase client, models, UI primitives, location, storage), `Features/` (Auth, Map, Submit, CatProfile, UserProfile, Friends, Explore, Sightings, Onboarding)
-- **Roadmap** → [`docs/ios-rebuild.md`](docs/ios-rebuild.md)
+- **App source** → [`CatSnap/CatSnap/`](CatSnap/CatSnap) — `Core/` (Supabase client, models, UI primitives, location, storage), `Features/` (Auth, Map, Submit, CatProfile, UserProfile, Friends, Explore, Sightings, Onboarding, Moderation)
+- **Pre-launch checklist** → [`docs/launch-checklist.md`](docs/launch-checklist.md)
 - **Brand** → [`docs/brand.md`](docs/brand.md) (palette, typography, mark)
-- **Design system** → [`docs/design-reference.md`](docs/design-reference.md), [`docs/design-implementation.md`](docs/design-implementation.md)
 - **DB schema** → [`docs/new-schema.sql`](docs/new-schema.sql) (Postgres + PostGIS)
-- **Product spec** → [`docs/features.md`](docs/features.md)
-- **Future work** → [`docs/future-upgrades.md`](docs/future-upgrades.md)
-- **Competitive landscape** → [`docs/competitive-analysis.md`](docs/competitive-analysis.md)
 - **Working notes for Claude Code** → [`CLAUDE.md`](CLAUDE.md)
 
 ## Tech stack

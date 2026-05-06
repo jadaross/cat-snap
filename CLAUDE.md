@@ -8,7 +8,7 @@ Cat-Snap is a native SwiftUI iOS app (iOS 17+) for spotting and tracking street 
 
 The previous Next.js web app was retired and lives at git tag `v1.0.2-web-final`. The iOS rebuild started fresh — new Supabase project, new schema, new branding.
 
-The canonical roadmap is `docs/ios-rebuild.md`. Phase 2 (auth + first round-trip) is done and on `main`. Phase 3 (MVP: map, submit-sighting, profiles) is next.
+v1 feature surface is complete on `main`: map, submit, cat + user profiles, friends graph, explore guide, streaks, onboarding, plus Apple's UGC review gates (account deletion + block/report). The pre-launch checklist — Swift sweep, Snyk audit, UI/UX pass, App Store gates, ship sequence — lives in `docs/launch-checklist.md`.
 
 ## Build & run
 
@@ -52,12 +52,14 @@ The canonical roadmap is `docs/ios-rebuild.md`. Phase 2 (auth + first round-trip
 
 ## Schema and RLS
 
-- v1 migrations are applied to the live project. Tables: `profiles`, `cats`, `sightings`, `sighting_tags`, `follows`. RLS is on; anon reads everywhere, writes require `auth.uid()`.
+- v1 migrations are applied to the live project. Tables: `profiles`, `cats`, `sightings`, `sighting_tags`, `follows`, `blocks`, `reports`. RLS is on; anon reads everywhere, writes require `auth.uid()`.
 - `cats.rarity` is constrained to `('common','uncommon','rare','legendary')` — match this in `Cat.Rarity` if changing.
 - A trigger auto-creates a profile row when `auth.users` gets a new entry; don't insert into `profiles` directly from the client.
 - Storage buckets `sighting-photos` and `avatars` are public-read, authenticated-write only.
 - Friends ships as a one-way follow graph: `public.follows` + the `friend_activity` / `my_friends` / `search_profiles` RPCs. Don't fork into an alternate model without checking.
-- Features still deferred (don't add tables for these without checking): reactions, comments, merge_requests, real `badges`/`streaks` (UI uses locally-computed awards + streak today), sighting visibility flags.
+- Block/report ships via `public.blocks` (symmetric pair filtering happens server-side inside the four read-side RPCs above and `sightings_near`) and `public.reports` (append-only from clients, admin triage via the dashboard). Don't add new read RPCs without including the same block-pair filter.
+- Account deletion goes through the `delete-account` Supabase edge function (`supabase/functions/delete-account/`); it removes storage objects under `sighting-photos/<uid>/` and `avatars/<uid>/`, then calls `auth.admin.deleteUser`. FKs cascade through `profiles` → everything else.
+- Features still deferred (don't add tables for these without checking): reactions, comments, merge_requests, real `badges` (UI uses locally-computed awards + streak today), sighting visibility flags, server-side photo moderation.
 
 ## Things commonly mistaken
 
