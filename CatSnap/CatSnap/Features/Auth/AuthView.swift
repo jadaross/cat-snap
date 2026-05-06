@@ -1,3 +1,4 @@
+import AuthenticationServices
 import SwiftUI
 
 struct AuthView: View {
@@ -9,6 +10,7 @@ struct AuthView: View {
     @State private var isWorking = false
     @State private var error: String?
     @State private var info: String?
+    @State private var currentNonce: String?
 
     enum Mode { case signIn, signUp }
 
@@ -21,6 +23,29 @@ struct AuthView: View {
 
                 CatWindowMark(size: 96)
                 Wordmark(size: 44)
+
+                SignInWithAppleButton(.signIn) { request in
+                    let raw = AppleSignIn.makeNonce()
+                    currentNonce = raw
+                    request.requestedScopes = [.fullName, .email]
+                    request.nonce = AppleSignIn.sha256Hex(raw)
+                } onCompletion: { result in
+                    handleApple(result)
+                }
+                .signInWithAppleButtonStyle(.black)
+                .frame(height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.horizontal, 32)
+                .disabled(isWorking)
+
+                HStack(spacing: 12) {
+                    Rectangle().fill(Color.stoneLight).frame(height: 1)
+                    Text("or")
+                        .font(.Brand.jakarta(.medium, size: 12))
+                        .foregroundStyle(Color.stone)
+                    Rectangle().fill(Color.stoneLight).frame(height: 1)
+                }
+                .padding(.horizontal, 32)
 
                 VStack(spacing: 12) {
                     field("email", text: $email, keyboard: .emailAddress, secure: false)
@@ -103,6 +128,40 @@ struct AuthView: View {
                 }
             } catch {
                 self.error = error.localizedDescription
+            }
+        }
+    }
+
+    private func handleApple(_ result: Result<ASAuthorization, Error>) {
+        error = nil
+        info = nil
+        switch result {
+        case .failure(let err):
+            // User-cancelled is a normal abort, not an error. Other failures
+            // (network, malformed credential, no iCloud account on simulator)
+            // surface to the user.
+            if let asError = err as? ASAuthorizationError, asError.code == .canceled {
+                currentNonce = nil
+                return
+            }
+            currentNonce = nil
+            self.error = err.localizedDescription
+        case .success(let authorization):
+            guard let raw = currentNonce else {
+                self.error = "Sign in with Apple: missing nonce. Please try again."
+                return
+            }
+            isWorking = true
+            Task {
+                defer {
+                    isWorking = false
+                    currentNonce = nil
+                }
+                do {
+                    try await AppleSignIn.exchange(authorization: authorization, rawNonce: raw)
+                } catch {
+                    self.error = error.localizedDescription
+                }
             }
         }
     }

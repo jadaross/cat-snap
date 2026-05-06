@@ -17,11 +17,55 @@ Earlier roadmap docs (Phase 0–3.5 build journal, design notes, competitive sca
 ## 1. Functional changes I want to make first
 
 > _Map out any functional/product changes you want to land **before** the launch checklist work below. Anything here gets folded into the build before we start polishing._
->
-> - 
-> - 
-> - 
-> - 
+
+### 1.1 Drop the "missing cat" framing
+- [ ] Remove the "missing cat" concept and the `?` placeholder from the Explore / guide views. A cat is either spotted or not-yet-spotted — never "missing".
+- [ ] Remove the progress bar growing at the top of the guide (it was tied to the missing-cat completion metric and no longer makes sense).
+- [ ] Audit copy across guide / explore / cat-profile for any remaining "missing" / "find me" wording and rewrite to "spotted" vs "not yet spotted".
+
+### 1.2 Cat profile entry points
+- [ ] Tapping a cat in the **Nearby cats** list (and any cat row in Explore / guide) opens that cat's profile. Confirm every cat-row tap target routes to `CatProfileView`, not just the highlighted ones.
+- [ ] From inside a cat's profile, tapping **Explore** in the tab bar returns the user to the **Map**, not back to the guide stack. (Pop to root + switch tab.)
+
+### 1.3 "I spotted them" vs "Upload a sighting"
+- [ ] Split the current submit action into two distinct affordances on `CatProfileView`:
+  - **"I spotted them"** — quick, no-photo check-in. Logs the sighting (timestamp + location) and increments the spot count. No camera, no upload.
+  - **"Upload a sighting of <cat name>"** — the existing photo flow, but pre-filled with this cat (so it's adding a photo to a known cat, not creating a new one). The button label should interpolate the cat's actual name.
+- [ ] Schema/RPC check: `create_sighting_with_cat` currently expects a photo URL — needs a path (or a sibling RPC) that allows `photo_url IS NULL` for the no-photo check-in case. Confirm RLS + storage policies still hold.
+
+### 1.4 Editable / pinnable sighting location
+- [ ] Today the sighting location comes from EXIF on the uploaded photo. Keep that as the default when a photo is uploaded, **but** let the user drop / drag a pin to override before submitting.
+- [ ] For the no-photo "I spotted them" flow, default to current device location and let the user adjust the pin before confirming.
+- [ ] Add a "change location" affordance on the submit screen (map preview with a draggable pin). Make sure the final write hits the `location geography(Point, 4326)` column via the typed insert path, not by parsing strings.
+
+### 1.5 Awards: bigger, tappable, explained
+- [ ] Increase award icon size on the user profile and tighten the spacing between awards — currently they read as small and over-spaced.
+- [ ] Each award is tappable and opens a sheet/popover with: award name, description, and the criteria for unlocking it ("spot 10 cats", "7-day streak", etc.).
+- [ ] Locked vs. unlocked treatment should still be visually distinct after the size change.
+
+### 1.6 Drop the today / week / all-time filter
+- [ ] Remove the today / week / all-time time-filter chips from the map (and any other surface they appear on). Default — and only — view is all-time.
+- [ ] Drop the related state, query params, and RPC arg(s); whatever currently powers the filter (likely a `since` / `time_window` parameter on `sightings_near`) gets simplified to always return all-time data.
+- [ ] Audit Section 4.3 tap-target list — the time-filter chips were called out there and that bullet can come out once the chips are gone.
+
+### 1.7 Favorites (heart) + favorites filter
+- [ ] Add a heart / favorite toggle on `CatProfileView` (and inline on cat rows where it fits).
+- [ ] Filter on the **Guide / Explore** view: "show favorites only".
+- [ ] Filter on the **Map** view: "show favorites only" — same heart button, hides non-favorited pins.
+- [ ] Schema: add a `favorites` table (`user_id`, `cat_id`, `created_at`, PK on the pair) with RLS — `auth.uid() = user_id` for all CRUD. Update `sightings_near` and the guide RPC to either join favorites or accept a `favorites_only` flag.
+
+### 1.8 Guide: filter by cat attributes, location, time, etc.
+- [ ] Add a filter affordance to the guide that supports combining multiple criteria:
+  - **Attributes** — rarity (common / uncommon / rare / legendary), colour / pattern, any tag fields surfaced via `sighting_tags`.
+  - **Location** — within a chosen radius of a point (current location or a dropped pin), or by a coarse area filter.
+  - **Time** — first-spotted / last-spotted within a date range. (Independent of the removed map time-filter chips — this is a guide-only, opt-in control.)
+  - **Status** — spotted vs not-yet-spotted (replaces the old "missing" framing); favorites-only stacks on top from 1.7.
+- [ ] Filter state should be ephemeral (resets on app relaunch is fine for v1) and visible — surface active filters as removable chips above the grid.
+- [ ] Schema/RPC: extend the guide RPC with optional filter args rather than building a separate one. Confirm RLS still applies and the query plan stays sane (PostGIS index for the radius case, btree on `cats.rarity`).
+
+### 1.9 Cross-cutting follow-ups (after the above land)
+- [ ] Re-walk Section 4 (UI/UX pass) once these changes settle — copy, empty states, and tap-target audits all shift.
+- [ ] Update `docs/new-schema.sql` to reflect the new `favorites` table and any RPC changes.
 
 ---
 
@@ -155,11 +199,13 @@ Things that get the app **rejected** if missing.
 - Migrations `0001_blocks_and_reports` and `0002_filter_blocked_in_rpcs` applied to live Supabase.
 - **Still pending:** an admin dashboard / triage flow for `public.reports`. v1 acceptable — manual triage via the Supabase dashboard is fine for launch.
 
-### A3. Sign in with Apple (Guideline 4.8)
-- [ ] Required if any third-party auth is offered. With email-only it's technically optional, but reviewers expect it.
-- [ ] Xcode → CatSnap target → Signing & Capabilities → `+ Capability` → Sign in with Apple.
-- [ ] Supabase Dashboard → Authentication → Providers → Apple → enable; paste Service ID + key from the Apple Developer console.
-- [ ] Add `SignInWithAppleButton` to `AuthView`; wire to `supabase.auth.signInWithIdToken(...)`.
+### A3. Sign in with Apple (Guideline 4.8) — code shipped, manual config pending
+Code is in place — `Core/Supabase/AppleSignIn.swift` (nonce + SHA-256 + `signInWithIdToken` exchange + best-effort `display_name` backfill) and the button + "or" divider in `Features/Auth/AuthView.swift`. The native flow needs no Service ID or `.p8` for sign-in.
+- [x] Add `SignInWithAppleButton` to `AuthView`; wire to `supabase.auth.signInWithIdToken(...)`.
+- [ ] Apple Developer console → Identifiers → App ID `com.jadaross.CatSnap` → Capabilities → tick **Sign In with Apple** → Configure → "Enable as a primary App ID" → Save.
+- [ ] Xcode → CatSnap target → Signing & Capabilities → `+ Capability` → "Sign in with Apple". This auto-creates `CatSnap/CatSnap.entitlements` and adds `CODE_SIGN_ENTITLEMENTS` to both build configs.
+- [ ] Supabase Dashboard → Authentication → Providers → Apple → toggle **Enabled** → fill **only** "Authorized Client IDs" with `com.jadaross.CatSnap` → Save. Leave Service ID / Secret Key / Team ID / Key ID blank — those are the OAuth-redirect fields and are not needed for the native flow.
+- [ ] **Follow-up (deferred):** extend the `delete-account` edge function to call Apple's `https://appleid.apple.com/auth/revoke` endpoint when a SIWA user deletes their account. This is the only piece that requires a Service ID + `.p8` (stored as a Supabase secret). Apple's strict reading of 5.1.1(v) wants revocation; reviewers historically pass on deletion alone but it's not guaranteed. TODO mirrored in `Core/Supabase/AccountDeletion.swift`.
 
 ### A4. Privacy policy + Terms of Service
 - [ ] Host both as static pages (GitHub Pages, a Vercel static deploy, or a one-pager on `catsnap.app`).
