@@ -1,6 +1,5 @@
 import SwiftUI
-import Supabase
-import PostgREST
+import CoreLocation
 
 @MainActor
 @Observable
@@ -17,18 +16,15 @@ final class SightingsListModel {
     func load() async {
         state = .loading
         do {
-            // Default to central London until we wire CoreLocation. The RPC
-            // returns the most recent sightings within `p_radius` metres, so
-            // a wide radius behaves like "latest sightings" for a small dataset.
-            let response: [NearbySighting] = try await supabase
-                .rpc("sightings_near", params: [
-                    "p_lat": 51.5074,
-                    "p_lng": -0.1278,
-                    "p_radius": 50_000,
-                    "p_limit": 50,
-                ])
-                .execute()
-                .value
+            // Default to central London until we wire CoreLocation. A wide
+            // radius makes `sightings_near` behave like "latest sightings"
+            // for a small dataset.
+            let london = CLLocationCoordinate2D(latitude: 51.5074, longitude: -0.1278)
+            let response = try await SightingsReads.nearby(
+                centre: london,
+                radiusMeters: 50_000,
+                limit: 50
+            )
             state = .loaded(response)
         } catch {
             state = .failed(error.localizedDescription)

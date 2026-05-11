@@ -30,13 +30,7 @@ final class CatProfileModel {
                 .execute()
                 .value
 
-            async let sightingsResponse: [Sighting] = supabase
-                .from("sightings")
-                .select()
-                .eq("cat_id", value: catId)
-                .order("seen_at", ascending: false)
-                .execute()
-                .value
+            async let sightings: [Sighting] = SightingsReads.forCat(catId)
 
             async let favoriteResponse: [FavoriteRow] = supabase
                 .from("favorites")
@@ -47,7 +41,7 @@ final class CatProfileModel {
                 .value
 
             let cats = try await catResponse
-            let sightings = try await sightingsResponse
+            let loadedSightings = try await sightings
             // The favorites query may fail if there's no signed-in session
             // (RLS blocks the read). Treat that as "not favorited" rather
             // than a hard error — the rest of the profile should still load.
@@ -58,7 +52,7 @@ final class CatProfileModel {
                 return
             }
             isFavorite = !favorites.isEmpty
-            state = .loaded(cat, sightings)
+            state = .loaded(cat, loadedSightings)
         } catch {
             state = .failed(error.localizedDescription)
         }

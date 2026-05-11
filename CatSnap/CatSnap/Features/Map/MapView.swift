@@ -1,7 +1,5 @@
 import SwiftUI
 import MapKit
-import Supabase
-import PostgREST
 
 @MainActor
 @Observable
@@ -40,41 +38,15 @@ final class MapModel {
         lastRadiusMeters = radiusMeters
         lastFavoritesOnly = favoritesOnly
         do {
-            let params = SightingsNearParams(
-                lat: centre.latitude,
-                lng: centre.longitude,
-                radius: radiusMeters,
-                limit: 200,
+            sightings = try await SightingsReads.nearby(
+                centre: centre,
+                radiusMeters: radiusMeters,
                 favoritesOnly: favoritesOnly
             )
-            let response: [NearbySighting] = try await supabase
-                .rpc("sightings_near", params: params)
-                .execute()
-                .value
-            sightings = response
             error = nil
         } catch {
             self.error = error.localizedDescription
         }
-    }
-}
-
-/// Encodable wrapper for the sightings_near RPC params. Mixed-type params can't
-/// be expressed as a single `[String: Double]` once `p_favorites_only` (Bool)
-/// joins the list.
-private struct SightingsNearParams: Encodable {
-    let lat: Double
-    let lng: Double
-    let radius: Double
-    let limit: Int
-    let favoritesOnly: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case lat            = "p_lat"
-        case lng            = "p_lng"
-        case radius         = "p_radius"
-        case limit          = "p_limit"
-        case favoritesOnly  = "p_favorites_only"
     }
 }
 

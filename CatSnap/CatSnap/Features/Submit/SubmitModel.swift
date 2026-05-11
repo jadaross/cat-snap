@@ -1,9 +1,6 @@
 import Foundation
 import UIKit
 import CoreLocation
-import Supabase
-import PostgREST
-import Auth
 
 @Observable
 @MainActor
@@ -138,50 +135,20 @@ final class SubmitModel {
         stage = .submitting
 
         do {
-            let photoUrl = try await PhotoUpload.uploadSightingPhoto(image)
-
             let trimmedName = catName.trimmingCharacters(in: .whitespacesAndNewlines)
-            let payload = CreateSightingPayload(
-                catName: prefilledCatId == nil ? (trimmedName.isEmpty ? nil : trimmedName) : nil,
-                existingCatId: prefilledCatId,
-                photoUrl: photoUrl.absoluteString,
-                lat: location.coordinate.latitude,
-                lng: location.coordinate.longitude,
+            try await SightingSubmission.submit(
+                image: image,
+                location: location,
                 locationLabel: locationLabel,
                 seenAt: exifSeenAt ?? Date(),
+                catName: trimmedName.isEmpty ? nil : trimmedName,
+                existingCatId: prefilledCatId,
                 tags: tags.sorted()
             )
-
-            _ = try await supabase
-                .rpc("create_sighting_with_cat", params: payload)
-                .execute()
-
             stage = .done
             NotificationCenter.default.post(name: .sightingSubmitted, object: nil)
         } catch {
             stage = .error(error.localizedDescription)
         }
-    }
-}
-
-private struct CreateSightingPayload: Encodable {
-    let catName: String?
-    let existingCatId: UUID?
-    let photoUrl: String
-    let lat: Double
-    let lng: Double
-    let locationLabel: String?
-    let seenAt: Date
-    let tags: [String]
-
-    enum CodingKeys: String, CodingKey {
-        case catName        = "p_cat_name"
-        case existingCatId  = "p_existing_cat_id"
-        case photoUrl       = "p_photo_url"
-        case lat            = "p_lat"
-        case lng            = "p_lng"
-        case locationLabel  = "p_location_label"
-        case seenAt         = "p_seen_at"
-        case tags           = "p_tags"
     }
 }

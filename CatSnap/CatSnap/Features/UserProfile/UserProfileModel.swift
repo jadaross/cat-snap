@@ -28,13 +28,7 @@ final class UserProfileModel {
                 .execute()
                 .value
 
-            async let sightingsResponse: [Sighting] = supabase
-                .from("sightings")
-                .select()
-                .eq("user_id", value: userId)
-                .order("seen_at", ascending: false)
-                .execute()
-                .value
+            async let sightingsResponse: [Sighting] = SightingsReads.forUser(userId)
 
             async let catCountResponse: PostgrestResponse<[Cat]> = supabase
                 .from("cats")
