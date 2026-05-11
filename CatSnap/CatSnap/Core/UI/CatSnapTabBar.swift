@@ -8,6 +8,9 @@ import SwiftUI
 struct CatSnapTabBar: View {
     @Binding var active: MainTabView.Tab
     let onSnap: () -> Void
+    /// Fires when a tab the user is already on gets tapped again — the host
+    /// uses this to pop nav stacks to root and reset secondary state.
+    var onTabReselect: ((MainTabView.Tab) -> Void)? = nil
 
     private let barHeight: CGFloat = 76
     private let snapSize: CGFloat = 96
@@ -19,7 +22,13 @@ struct CatSnapTabBar: View {
                 glyph: ExploreGlyph(),
                 label: "Explore",
                 isActive: active == .explore,
-                action: { active = .explore }
+                action: {
+                    if active == .explore {
+                        onTabReselect?(.explore)
+                    } else {
+                        active = .explore
+                    }
+                }
             )
 
             // Reserved column for the floating snap button — keeps the side
@@ -30,7 +39,13 @@ struct CatSnapTabBar: View {
                 glyph: ProfileGlyph(),
                 label: "You",
                 isActive: active == .you,
-                action: { active = .you }
+                action: {
+                    if active == .you {
+                        onTabReselect?(.you)
+                    } else {
+                        active = .you
+                    }
+                }
             )
         }
         .frame(maxWidth: .infinity, minHeight: barHeight, alignment: .top)

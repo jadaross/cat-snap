@@ -5,73 +5,66 @@ import PostgREST
 @MainActor
 @Observable
 final class GuideModel {
-    var cats: [Cat] = []
-    var spottedCatIds: Set<UUID> = []
-    /// Cat IDs the current user has at least one sighting for *today* (in the
-    /// device's calendar). Drives the `Today` filter chip.
-    var spottedTodayCatIds: Set<UUID> = []
-    /// Most recent sighting photo URL per cat — used as a fallback when
-    /// cats.primary_photo_url is null (the RPC never writes it back).
-    var catIdToPhotoUrl: [UUID: URL] = [:]
+    var rows: [GuideRow] = []
+    var criteria = GuideFilterCriteria()
     var isLoading = false
     var error: String?
+
+    /// Drives the inline three-chip quick-filter row. Mutually exclusive,
+    /// distinct from the multi-select sheet criteria. The default `.all`
+    /// shows every cat — there's no "not yet spotted" framing; the only
+    /// opt-in narrowing is `.spotted` ("cats I've seen").
+    enum QuickFilter: Hashable {
+        case all
+        case favorites
+        case spotted
+    }
+
+    var quickFilter: QuickFilter = .all {
+        didSet {
+            if oldValue == quickFilter { return }
+            switch quickFilter {
+            case .all:
+                criteria.favoritesOnly = false
+                criteria.status = .all
+            case .favorites:
+                criteria.favoritesOnly = true
+                criteria.status = .all
+            case .spotted:
+                criteria.favoritesOnly = false
+                criteria.status = .spotted
+            }
+        }
+    }
+
+    var spottedCount: Int {
+        rows.lazy.filter(\.isSpotted).count
+    }
+
+    var totalCount: Int {
+        rows.count
+    }
 
     func load() async {
         isLoading = true
         defer { isLoading = false }
         do {
-            async let catsResp: [Cat] = supabase
-                .from("cats")
-                .select()
-                .order("name")
+            let response: [GuideRow] = try await supabase
+                .rpc("guide_list", params: criteria)
                 .execute()
                 .value
-
-            let userId = try await supabase.auth.session.user.id
-            async let sightingsResp: [Sighting] = supabase
-                .from("sightings")
-                .select()
-                .eq("user_id", value: userId)
-                .execute()
-                .value
-
-            let allCats = try await catsResp
-            let mySightings = try await sightingsResp
-
-            cats = allCats
-            spottedCatIds = Set(mySightings.compactMap { $0.catId })
-
-            var photoMap: [UUID: URL] = [:]
-            for sighting in mySightings.sorted(by: { $0.seenAt > $1.seenAt }) {
-                if let catId = sighting.catId, photoMap[catId] == nil {
-                    photoMap[catId] = sighting.photoUrl
-                }
-            }
-            catIdToPhotoUrl = photoMap
-
-            let calendar = Calendar.current
-            let now = Date()
-            spottedTodayCatIds = Set(
-                mySightings
-                    .filter { calendar.isDate($0.seenAt, inSameDayAs: now) }
-                    .compactMap { $0.catId }
-            )
+            rows = response
             error = nil
         } catch {
-            // No active session yet — show the catalogue with no spots marked.
-            do {
-                cats = try await supabase
-                    .from("cats")
-                    .select()
-                    .order("name")
-                    .execute()
-                    .value
-                spottedCatIds = []
-                spottedTodayCatIds = []
-                self.error = nil
-            } catch {
-                self.error = error.localizedDescription
-            }
+            self.error = error.localizedDescription
         }
+    }
+
+    /// Apply a new criteria value (typically from the filter sheet) and
+    /// re-fetch. Idempotent — bails when the criteria hasn't changed.
+    func apply(_ next: GuideFilterCriteria) async {
+        if next == criteria { return }
+        criteria = next
+        await load()
     }
 }

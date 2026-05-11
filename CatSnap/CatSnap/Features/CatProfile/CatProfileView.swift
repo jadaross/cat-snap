@@ -4,6 +4,7 @@ struct CatProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model: CatProfileModel
     @State private var isSubmitPresented = false
+    @State private var isSpotConfirmPresented = false
     @State private var reportTarget: ReportTarget?
 
     init(catId: UUID) {
@@ -22,9 +23,22 @@ struct CatProfileView: View {
         .fullScreenCover(isPresented: $isSubmitPresented) {
             SubmitView(prefilledCatId: model.catId)
         }
+        .sheet(isPresented: $isSpotConfirmPresented) {
+            SpotConfirmSheet(
+                catId: model.catId,
+                catName: currentCatName
+            )
+        }
         .sheet(item: $reportTarget) { target in
             ReportSheet(target: target)
         }
+    }
+
+    /// Reach back into the loaded state to surface the cat name to the
+    /// SpotConfirmSheet — keeps the sheet decoupled from the view-model.
+    private var currentCatName: String? {
+        if case .loaded(let cat, _) = model.state { return cat.name }
+        return nil
     }
 
     @ViewBuilder
@@ -182,7 +196,7 @@ struct CatProfileView: View {
         VStack(alignment: .leading, spacing: 14) {
             statsRow(sightings: sightings, cat: cat)
             sightingsGrid(sightings: sightings)
-            Color.clear.frame(height: 96) // breathing room behind sticky CTA
+            Color.clear.frame(height: 144) // breathing room behind sticky CTA (two-button stack)
         }
         .padding(.horizontal, 16)
         .padding(.top, 18)
@@ -276,30 +290,59 @@ struct CatProfileView: View {
         }
     }
 
-    // Sticky bottom action — coral "I spotted them!" + heart side-button.
+    // Sticky bottom action — split CTA so the user can either log a quick
+    // no-photo spot or open the full photo flow. Heart sits trailing on
+    // the primary row.
     private var stickyCTA: some View {
-        HStack(spacing: 8) {
-            Button { isSubmitPresented = true } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "eye.fill")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("I spotted them!")
-                        .font(.Brand.jakarta(.bold, size: 15))
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Button { isSpotConfirmPresented = true } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "eye.fill")
+                            .font(.system(size: 14, weight: .bold))
+                        Text("I spotted \(spottedActionName)")
+                            .font(.Brand.jakarta(.bold, size: 15))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                    }
+                    .foregroundStyle(Color.creamSoft)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color.coral, in: .rect(cornerRadius: 14))
                 }
-                .foregroundStyle(Color.creamSoft)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(Color.coral, in: .rect(cornerRadius: 14))
+                .buttonStyle(.plain)
+
+                Button {
+                    Task { await model.toggleFavorite() }
+                } label: {
+                    Image(systemName: model.isFavorite ? "heart.fill" : "heart")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(model.isFavorite ? Color.coral : Color.ink)
+                        .frame(width: 52, height: 52)
+                        .background(Color.creamSoft, in: .rect(cornerRadius: 14))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.stoneLight, lineWidth: 1))
+                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: model.isFavorite)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(model.isFavorite ? "unfavourite" : "favourite")
             }
 
-            Button { /* heart / favourite — wired in v2 */ } label: {
-                Image(systemName: "heart")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.ink)
-                    .frame(width: 52, height: 52)
-                    .background(Color.creamSoft, in: .rect(cornerRadius: 14))
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.stoneLight, lineWidth: 1))
+            Button { isSubmitPresented = true } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 13, weight: .bold))
+                    Text("upload a sighting of \(spottedActionName)")
+                        .font(.Brand.jakarta(.bold, size: 14))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                .foregroundStyle(Color.ink)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(Color.creamSoft, in: .rect(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.stoneLight, lineWidth: 1))
             }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 12)
@@ -308,6 +351,13 @@ struct CatProfileView: View {
             LinearGradient(colors: [.clear, Color.cream.opacity(0.95)],
                            startPoint: .top, endPoint: .bottom)
         )
+    }
+
+    /// Lowercased cat name for in-button copy. Falls back to "this cat" so
+    /// labels never read as "I spotted ".
+    private var spottedActionName: String {
+        let trimmed = (currentCatName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "this cat" : trimmed.lowercased()
     }
 
     private struct BadgeStyle {

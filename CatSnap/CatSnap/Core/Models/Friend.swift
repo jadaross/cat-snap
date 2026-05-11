@@ -2,7 +2,7 @@ import Foundation
 
 // Mirrors the row shape returned by `public.my_friends()` — see migration
 // `v1_follows_and_friend_activity`.
-struct Friend: Codable, Identifiable, Hashable {
+struct Friend: Codable, Identifiable, Hashable, Sendable {
     let userId: UUID
     let username: String
     let displayName: String?
@@ -21,7 +21,7 @@ struct Friend: Codable, Identifiable, Hashable {
 }
 
 // Mirrors the row shape returned by `public.search_profiles(text, int)`.
-struct ProfileSearchResult: Codable, Identifiable, Hashable {
+struct ProfileSearchResult: Codable, Identifiable, Hashable, Sendable {
     let userId: UUID
     let username: String
     let displayName: String?

@@ -30,9 +30,16 @@ final class SubmitModel {
     /// True if the current photo came from the camera roll (not a live snap).
     /// Surfaces "from camera roll" affordances in the editor.
     var isFromCameraRoll: Bool = false
+    /// EXIF-derived location preserved so the user can revert after dragging
+    /// the pin. Nil for camera-snap photos and uploads without GPS metadata.
+    var exifLocation: CLLocation?
+    /// Most recent device-fix location, preserved so the user can snap the
+    /// pin back to "where I am" without re-prompting permissions.
+    var deviceLocation: CLLocation?
 
     let prefilledCatId: UUID?
     private let locationManager = LocationManager()
+    private var reverseGeocodeTask: Task<Void, Never>?
 
     init(prefilledCatId: UUID? = nil) {
         self.prefilledCatId = prefilledCatId
@@ -54,6 +61,7 @@ final class SubmitModel {
         exifSeenAt = exif.creationDate
 
         if let exifLoc = exif.location {
+            exifLocation = exifLoc
             location = exifLoc
             locationLabel = await locationManager.reverseGeocode(exifLoc)
             stage = .editing
@@ -66,12 +74,48 @@ final class SubmitModel {
     private func captureLocation() async {
         do {
             let loc = try await locationManager.requestOneShot()
+            deviceLocation = loc
             location = loc
             locationLabel = await locationManager.reverseGeocode(loc)
             stage = .editing
         } catch {
             stage = .error(error.localizedDescription)
         }
+    }
+
+    /// Move the pin. Debounces a reverse-geocode so panning around the map
+    /// doesn't fire a request on every camera frame.
+    func updatePin(to coordinate: CLLocationCoordinate2D) {
+        let updated = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        location = updated
+        reverseGeocodeTask?.cancel()
+        reverseGeocodeTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            if Task.isCancelled { return }
+            let label = await self?.locationManager.reverseGeocode(updated)
+            if Task.isCancelled { return }
+            await MainActor.run { self?.locationLabel = label }
+        }
+    }
+
+    /// Reset the pin to the user's current device location (one-shot).
+    func usePinFromDeviceLocation() async {
+        do {
+            let loc = try await locationManager.requestOneShot()
+            deviceLocation = loc
+            location = loc
+            locationLabel = await locationManager.reverseGeocode(loc)
+        } catch {
+            // Silent failure — user can pan manually.
+        }
+    }
+
+    /// Reset the pin back to the photo's original EXIF location, when one
+    /// is available. No-op otherwise.
+    func usePinFromExif() async {
+        guard let exifLoc = exifLocation else { return }
+        location = exifLoc
+        locationLabel = await locationManager.reverseGeocode(exifLoc)
     }
 
     func toggleTag(_ tag: String) {

@@ -10,40 +10,43 @@ final class MapModel {
     var isLoading = false
     var error: String?
 
-    /// Latest centre + radius used for fetching — for the post-submit refresh
-    /// where the user hasn't moved.
+    /// Latest centre + radius + favourites-only flag used for fetching — for the
+    /// post-submit refresh where the user hasn't moved.
     private var lastFetchCentre: CLLocationCoordinate2D?
     private var lastRadiusMeters: Double = 5_000
+    private var lastFavoritesOnly: Bool = false
     private let refetchThresholdMeters: Double = 500
 
-    func fetchIfNeeded(centre: CLLocationCoordinate2D, radiusMeters: Double) async {
-        if let last = lastFetchCentre {
+    func fetchIfNeeded(centre: CLLocationCoordinate2D, radiusMeters: Double, favoritesOnly: Bool) async {
+        if let last = lastFetchCentre, lastFavoritesOnly == favoritesOnly {
             let distance = CLLocation(latitude: last.latitude, longitude: last.longitude)
                 .distance(from: CLLocation(latitude: centre.latitude, longitude: centre.longitude))
             if distance < refetchThresholdMeters && !sightings.isEmpty {
                 return
             }
         }
-        await fetch(centre: centre, radiusMeters: radiusMeters)
+        await fetch(centre: centre, radiusMeters: radiusMeters, favoritesOnly: favoritesOnly)
     }
 
     func refresh() async {
         guard let centre = lastFetchCentre else { return }
-        await fetch(centre: centre, radiusMeters: lastRadiusMeters)
+        await fetch(centre: centre, radiusMeters: lastRadiusMeters, favoritesOnly: lastFavoritesOnly)
     }
 
-    func fetch(centre: CLLocationCoordinate2D, radiusMeters: Double) async {
+    func fetch(centre: CLLocationCoordinate2D, radiusMeters: Double, favoritesOnly: Bool) async {
         isLoading = true
         defer { isLoading = false }
         lastFetchCentre = centre
         lastRadiusMeters = radiusMeters
+        lastFavoritesOnly = favoritesOnly
         do {
-            let params: [String: Double] = [
-                "p_lat": centre.latitude,
-                "p_lng": centre.longitude,
-                "p_radius": radiusMeters,
-                "p_limit": 200,
-            ]
+            let params = SightingsNearParams(
+                lat: centre.latitude,
+                lng: centre.longitude,
+                radius: radiusMeters,
+                limit: 200,
+                favoritesOnly: favoritesOnly
+            )
             let response: [NearbySighting] = try await supabase
                 .rpc("sightings_near", params: params)
                 .execute()
@@ -56,33 +59,31 @@ final class MapModel {
     }
 }
 
-enum TimeFilter: String, CaseIterable, Hashable {
-    case today, week, all
+/// Encodable wrapper for the sightings_near RPC params. Mixed-type params can't
+/// be expressed as a single `[String: Double]` once `p_favorites_only` (Bool)
+/// joins the list.
+private struct SightingsNearParams: Encodable {
+    let lat: Double
+    let lng: Double
+    let radius: Double
+    let limit: Int
+    let favoritesOnly: Bool
 
-    var label: String { rawValue }
-
-    func includes(_ date: Date, now: Date = Date()) -> Bool {
-        switch self {
-        case .all:
-            return true
-        case .today:
-            return Calendar.current.isDate(date, inSameDayAs: now)
-        case .week:
-            guard let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: now) else { return true }
-            return date >= weekAgo
-        }
+    enum CodingKeys: String, CodingKey {
+        case lat            = "p_lat"
+        case lng            = "p_lng"
+        case radius         = "p_radius"
+        case limit          = "p_limit"
+        case favoritesOnly  = "p_favorites_only"
     }
 }
 
 struct MapView: View {
     @Binding var exploreView: ExploreSubview
     @State private var model = MapModel()
-    @State private var friendsModel = FriendsModel()
     @State private var locationManager = LocationManager()
-    @State private var selectedSighting: NearbySighting?
     @State private var path = NavigationPath()
-    @State private var timeFilter: TimeFilter = .all
-    @State private var reportTarget: ReportTarget?
+    @State private var favoritesOnly: Bool = false
     @State private var cameraPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
             center: .london,
@@ -100,10 +101,6 @@ struct MapView: View {
     /// Good enough for picking a fetch radius from a map span.
     private static let metersPerDegree = 111_000.0
 
-    private var filteredSightings: [NearbySighting] {
-        model.sightings.filter { timeFilter.includes($0.seenAt) }
-    }
-
     var body: some View {
         NavigationStack(path: $path) {
             mapContent
@@ -116,13 +113,22 @@ struct MapView: View {
 
     private var mapContent: some View {
         ZStack(alignment: .bottom) {
-            Map(position: $cameraPosition, selection: Binding(
-                get: { selectedSighting?.id },
+            // Tapping a pin sets the selection binding; we route that to a
+            // navigation push immediately so there's no intermediate detail
+            // card. The selection-id source-of-truth is left at nil; the
+            // setter just consumes the tap.
+            Map(position: $cameraPosition, selection: Binding<UUID?>(
+                get: { nil },
                 set: { id in
-                    selectedSighting = id.flatMap { tag in filteredSightings.first { $0.id == tag } }
+                    guard
+                        let id,
+                        let sighting = model.sightings.first(where: { $0.id == id }),
+                        let catId = sighting.catId
+                    else { return }
+                    path.append(catId)
                 }
             )) {
-                ForEach(filteredSightings) { sighting in
+                ForEach(model.sightings) { sighting in
                     Annotation(
                         sighting.catName ?? "",
                         coordinate: CLLocationCoordinate2D(latitude: sighting.lat, longitude: sighting.lng),
@@ -130,52 +136,29 @@ struct MapView: View {
                     ) {
                         CatPin(
                             photoUrl: sighting.catPhotoUrl ?? sighting.photoUrl,
-                            isSelected: selectedSighting?.id == sighting.id
+                            isSelected: false
                         )
                     }
                     .tag(sighting.id)
                 }
             }
-            .mapStyle(.standard(elevation: .flat))
+            .mapStyle(.standard(elevation: .flat, emphasis: .muted))
             .onMapCameraChange(frequency: .onEnd) { context in
                 mapRegion = context.region
                 Task {
                     let centre = context.region.center
                     let radius = max(context.region.span.latitudeDelta, context.region.span.longitudeDelta) * Self.metersPerDegree
-                    await model.fetchIfNeeded(centre: centre, radiusMeters: max(radius, 1_000))
+                    await model.fetchIfNeeded(
+                        centre: centre,
+                        radiusMeters: max(radius, 1_000),
+                        favoritesOnly: favoritesOnly
+                    )
                 }
             }
             .ignoresSafeArea(edges: .bottom)
 
-            if let selected = selectedSighting {
-                PinDetailCard(
-                    sighting: selected,
-                    onTapToOpen: {
-                        if let catId = selected.catId {
-                            path.append(catId)
-                        }
-                    },
-                    onReport: { reportTarget = .sighting(selected.id) },
-                    onBlock: {
-                        Task {
-                            try? await friendsModel.block(userId: selected.userId)
-                            selectedSighting = nil
-                            await model.refresh()
-                        }
-                    }
-                )
-                .padding(.horizontal, 16)
-                .padding(.bottom, 96)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            } else if !filteredSightings.isEmpty {
-                NearbyCatsCard(sightings: filteredSightings) { sighting in
-                    focus(on: sighting)
-                }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-
-            // Empty-state card. Shown when nothing matched the filter.
-            if !model.isLoading && filteredSightings.isEmpty && selectedSighting == nil {
+            // Empty-state card.
+            if !model.isLoading && model.sightings.isEmpty {
                 emptyStateCard
                     .padding(.horizontal, 24)
                     .padding(.bottom, 96)
@@ -191,25 +174,25 @@ struct MapView: View {
                     .frame(maxHeight: .infinity, alignment: .top)
             }
 
-            // Top header (Map / Guide toggle + location pill) and recentre button.
+            // Top header (Map / Guide toggle + location pill) and recentre / zoom / favourites buttons.
             VStack(spacing: 8) {
                 SpotsHeader(view: $exploreView)
                     .padding(.top, 8)
 
-                if let recent = mostRecentSighting, selectedSighting == nil {
+                if let recent = mostRecentSighting {
                     LiveTickerChip(
                         title: tickerTitle(for: recent),
                         timestamp: relativeShort(for: recent.seenAt),
-                        onTap: { focus(on: recent) }
+                        onTap: { recentre(on: recent) }
                     )
                     .padding(.horizontal, 16)
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
 
                 HStack(alignment: .top) {
-                    timeFilterRow
                     Spacer()
                     VStack(spacing: 8) {
+                        favoritesToggleButton
                         recenterButton
                         zoomButtons
                     }
@@ -218,32 +201,43 @@ struct MapView: View {
                 Spacer()
             }
         }
-        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: selectedSighting?.id)
-        .animation(.easeInOut(duration: 0.2), value: filteredSightings.count)
+        .animation(.easeInOut(duration: 0.2), value: model.sightings.count)
         .task {
             await initialCentre()
+        }
+        .onChange(of: favoritesOnly) { _, _ in
+            Task {
+                let centre = mapRegion.center
+                let radius = max(mapRegion.span.latitudeDelta, mapRegion.span.longitudeDelta) * Self.metersPerDegree
+                await model.fetch(
+                    centre: centre,
+                    radiusMeters: max(radius, 1_000),
+                    favoritesOnly: favoritesOnly
+                )
+                frameCameraOnPins()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .sightingSubmitted)) { _ in
             Task { await model.refresh() }
         }
-        .sheet(item: $reportTarget) { target in
-            ReportSheet(target: target)
+        .onReceive(NotificationCenter.default.publisher(for: .popExploreToRoot)) { _ in
+            path = NavigationPath()
         }
     }
 
-    private var timeFilterRow: some View {
-        HStack(spacing: 6) {
-            ForEach(TimeFilter.allCases, id: \.self) { filter in
-                TagChip(
-                    tag: filter.label,
-                    isActive: timeFilter == filter,
-                    onTap: { timeFilter = filter }
-                )
-            }
+    private var favoritesToggleButton: some View {
+        Button {
+            favoritesOnly.toggle()
+        } label: {
+            Image(systemName: favoritesOnly ? "heart.fill" : "heart")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(favoritesOnly ? Color.creamSoft : Color.coral)
+                .frame(width: 44, height: 44)
+                .background(favoritesOnly ? Color.coral : Color.creamSoft, in: .circle)
+                .shadow(color: Color.ink.opacity(0.18), radius: 6, y: 2)
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: favoritesOnly)
         }
-        .padding(6)
-        .background(Color.creamSoft.opacity(0.92), in: .capsule)
-        .shadow(color: Color.ink.opacity(0.12), radius: 6, y: 2)
+        .accessibilityLabel(favoritesOnly ? "show all cats" : "show only favourites")
     }
 
     private var recenterButton: some View {
@@ -291,7 +285,7 @@ struct MapView: View {
             Text(emptyStateTitle)
                 .font(.Brand.jakarta(.semibold, size: 14))
                 .foregroundStyle(Color.ink)
-            Text("tap + to log one.")
+            Text(emptyStateSubtitle)
                 .font(.Brand.jakarta(.regular, size: 12))
                 .foregroundStyle(Color.stone)
         }
@@ -303,11 +297,11 @@ struct MapView: View {
     }
 
     private var emptyStateTitle: String {
-        switch timeFilter {
-        case .today: return "no sightings today"
-        case .week:  return "no sightings this week"
-        case .all:   return "no cats spotted nearby"
-        }
+        favoritesOnly ? "no favourites in this area" : "no cats spotted nearby"
+    }
+
+    private var emptyStateSubtitle: String {
+        favoritesOnly ? "tap the heart to show all cats." : "tap + to log one."
     }
 
     // Most recent sighting in the last hour — drives the live ticker chip.
@@ -344,8 +338,10 @@ struct MapView: View {
         }
     }
 
-    private func focus(on sighting: NearbySighting) {
-        selectedSighting = sighting
+    /// Centre the map on a sighting without selecting it — used by the live
+    /// ticker chip so tapping "kitty just spotted nearby" pans to its pin
+    /// without bouncing the user out to the cat profile.
+    private func recentre(on sighting: NearbySighting) {
         withAnimation {
             cameraPosition = .region(MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: sighting.lat, longitude: sighting.lng),
@@ -361,7 +357,8 @@ struct MapView: View {
         case .authorizedWhenInUse, .authorizedAlways:
             await recenterToUser(prompting: false)
         default:
-            await model.fetch(centre: .london, radiusMeters: 5_000)
+            await model.fetch(centre: .london, radiusMeters: 5_000, favoritesOnly: favoritesOnly)
+            frameCameraOnPins()
         }
     }
 
@@ -369,20 +366,67 @@ struct MapView: View {
         do {
             // If we'd trigger a permission prompt and the caller said no, bail.
             if !prompting && locationManager.authorizationStatus == .notDetermined {
-                await model.fetch(centre: .london, radiusMeters: 5_000)
+                await model.fetch(centre: .london, radiusMeters: 5_000, favoritesOnly: favoritesOnly)
+                frameCameraOnPins()
                 return
             }
             let location = try await locationManager.requestOneShot()
+            // Centre on the user immediately so the map isn't blank during the
+            // fetch; the post-fetch frameCameraOnPins() will tighten in around
+            // the cats nearby (or stay put if nothing came back).
             withAnimation {
                 cameraPosition = .region(MKCoordinateRegion(
                     center: location.coordinate,
                     span: Self.defaultSpan
                 ))
             }
-            await model.fetch(centre: location.coordinate, radiusMeters: 5_000)
+            await model.fetch(centre: location.coordinate, radiusMeters: 5_000, favoritesOnly: favoritesOnly)
+            frameCameraOnPins(includingUser: location.coordinate)
         } catch {
             // Silent failure — user can pan manually. Map already centred on London.
-            await model.fetch(centre: .london, radiusMeters: 5_000)
+            await model.fetch(centre: .london, radiusMeters: 5_000, favoritesOnly: favoritesOnly)
+            frameCameraOnPins()
+        }
+    }
+
+    /// Re-frame the camera to comfortably fit every pin in `model.sightings`.
+    /// Skipped when there are no pins — leaves whatever centring the caller
+    /// already established (user location / London fallback). The `including`
+    /// coordinate (typically the user) is folded into the bounding box when
+    /// supplied so the user's location isn't lost off-screen.
+    private func frameCameraOnPins(includingUser user: CLLocationCoordinate2D? = nil) {
+        guard !model.sightings.isEmpty else { return }
+
+        var lats = model.sightings.map(\.lat)
+        var lngs = model.sightings.map(\.lng)
+        if let user {
+            lats.append(user.latitude)
+            lngs.append(user.longitude)
+        }
+
+        guard
+            let minLat = lats.min(), let maxLat = lats.max(),
+            let minLng = lngs.min(), let maxLng = lngs.max()
+        else { return }
+
+        let centre = CLLocationCoordinate2D(
+            latitude:  (minLat + maxLat) / 2,
+            longitude: (minLng + maxLng) / 2
+        )
+
+        // 1.4× padding around the bounding box so pins aren't kissing the
+        // edges. Minimum span keeps a single pin from zooming uncomfortably
+        // close (≈1km wide).
+        let minSpan: CGFloat = 0.009
+        let span = MKCoordinateSpan(
+            latitudeDelta:  max((maxLat - minLat) * 1.4, minSpan),
+            longitudeDelta: max((maxLng - minLng) * 1.4, minSpan)
+        )
+
+        let region = MKCoordinateRegion(center: centre, span: span)
+        mapRegion = region
+        withAnimation(.easeInOut(duration: 0.5)) {
+            cameraPosition = .region(region)
         }
     }
 }

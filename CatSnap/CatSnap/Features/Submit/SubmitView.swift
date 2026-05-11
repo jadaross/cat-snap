@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import UIKit
+import CoreLocation
 
 struct SubmitView: View {
     @Environment(\.dismiss) private var dismiss
@@ -242,6 +243,8 @@ struct SubmitView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     photoCard
+                    sectionLabel("LOCATION")
+                    locationCard
                     sectionLabel("NAME")
                     nameField
                     sectionLabel("TAGS")
@@ -311,6 +314,65 @@ struct SubmitView: View {
             .font(.Brand.mono(size: 10))
             .tracking(1.2)
             .foregroundStyle(Color.stone)
+    }
+
+    @ViewBuilder
+    private var locationCard: some View {
+        if let location = model.location {
+            VStack(alignment: .leading, spacing: 8) {
+                MapPinPicker(
+                    coordinate: Binding(
+                        get: { location.coordinate },
+                        set: { model.updatePin(to: $0) }
+                    ),
+                    height: 160,
+                    onRecentre: nil
+                )
+
+                if let label = model.locationLabel, !label.isEmpty {
+                    Text(label.uppercased())
+                        .font(.Brand.mono(size: 10))
+                        .tracking(0.8)
+                        .foregroundStyle(Color.stone)
+                }
+
+                HStack(spacing: 8) {
+                    Button { Task { await model.usePinFromDeviceLocation() } } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "location.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text("use my location")
+                                .font(.Brand.jakarta(.bold, size: 12))
+                        }
+                        .foregroundStyle(Color.coral)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.creamSoft, in: .capsule)
+                        .overlay(Capsule().stroke(Color.stoneLight, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+
+                    if model.exifLocation != nil {
+                        Button { Task { await model.usePinFromExif() } } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "photo.fill")
+                                    .font(.system(size: 11, weight: .semibold))
+                                Text("use photo location")
+                                    .font(.Brand.jakarta(.bold, size: 12))
+                            }
+                            .foregroundStyle(Color.ink)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.creamSoft, in: .capsule)
+                            .overlay(Capsule().stroke(Color.stoneLight, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+            }
+        }
     }
 
     private var nameField: some View {

@@ -10,6 +10,7 @@ struct UserProfileView: View {
     @State private var friendsModel = FriendsModel()
     @State private var isEditPresented = false
     @State private var isSettingsPresented = false
+    @State private var selectedAward: Award?
     @State private var path = NavigationPath()
 
     enum Route: Hashable {
@@ -74,8 +75,7 @@ struct UserProfileView: View {
     }
 
     private func loadedView(profile: Profile, sightings: [Sighting], catCount: Int) -> some View {
-        let streak = currentStreak(sightings: sightings)
-        let awards = earnedAwards(sightings: sightings, catCount: catCount, streak: streak)
+        let achievements = ProfileAchievements.evaluate(sightings: sightings, catCount: catCount)
 
         return ScrollView {
             VStack(spacing: 0) {
@@ -83,14 +83,14 @@ struct UserProfileView: View {
                     profile: profile,
                     sightingCount: sightings.count,
                     catCount: catCount,
-                    streak: streak,
-                    awardCount: awards.filter(\.earned).count
+                    streak: achievements.streakDays,
+                    awardCount: achievements.awards.filter(\.earned).count
                 )
 
-                awardsSection(awards: awards)
+                awardsSection(awards: achievements.awards)
                     .padding(.top, 18)
 
-                streakCard(streak: streak, sightings: sightings)
+                streakCard(streak: achievements.streakDays, heatmap: achievements.heatmap)
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
 
@@ -114,6 +114,9 @@ struct UserProfileView: View {
         }
         .sheet(isPresented: $isSettingsPresented) {
             SettingsSheet()
+        }
+        .sheet(item: $selectedAward) { award in
+            AwardDetailSheet(award: award)
         }
     }
 
@@ -237,11 +240,13 @@ struct UserProfileView: View {
             }
 
             LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4),
-                spacing: 8
+                columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3),
+                spacing: 6
             ) {
                 ForEach(awards) { award in
-                    AwardTile(award: award)
+                    AwardTile(award: award) {
+                        selectedAward = award
+                    }
                 }
             }
         }
@@ -250,7 +255,7 @@ struct UserProfileView: View {
 
     // MARK: - Streak card
 
-    private func streakCard(streak: Int, sightings: [Sighting]) -> some View {
+    private func streakCard(streak: Int, heatmap: [Bool]) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("CURRENT STREAK")
                 .font(.Brand.mono(size: 10))
@@ -269,7 +274,7 @@ struct UserProfileView: View {
             .padding(.top, 6)
 
             HStack(spacing: 4) {
-                ForEach(Array(streakHeatmap(sightings: sightings).enumerated()), id: \.offset) { _, active in
+                ForEach(Array(heatmap.enumerated()), id: \.offset) { _, active in
                     RoundedRectangle(cornerRadius: 4)
                         .fill(active ? Color.streetlampYellow : Color.creamSoft.opacity(0.15))
                         .frame(maxWidth: .infinity)
@@ -473,113 +478,4 @@ struct UserProfileView: View {
         .padding(.vertical, 32)
     }
 
-    // MARK: - Streak / heatmap helpers
-
-    private func currentStreak(sightings: [Sighting]) -> Int {
-        let cal = Calendar.current
-        let activeDays = Set(sightings.map { cal.startOfDay(for: $0.seenAt) })
-        let today = cal.startOfDay(for: Date())
-
-        // Anchor the count on the most recent active day in {today, yesterday}
-        // so the streak doesn't reset to zero the moment the calendar flips
-        // before the user has logged a sighting today.
-        var endDay = today
-        if !activeDays.contains(endDay) {
-            guard let yesterday = cal.date(byAdding: .day, value: -1, to: today),
-                  activeDays.contains(yesterday) else { return 0 }
-            endDay = yesterday
-        }
-
-        var streak = 0
-        var day = endDay
-        while activeDays.contains(day) {
-            streak += 1
-            guard let prev = cal.date(byAdding: .day, value: -1, to: day) else { break }
-            day = prev
-        }
-        return streak
-    }
-
-    private func streakHeatmap(sightings: [Sighting]) -> [Bool] {
-        let cal = Calendar.current
-        let activeDays = Set(sightings.map { cal.startOfDay(for: $0.seenAt) })
-        let today = cal.startOfDay(for: Date())
-        return (0..<17).map { offset in
-            guard let day = cal.date(byAdding: .day, value: -(16 - offset), to: today) else { return false }
-            return activeDays.contains(day)
-        }
-    }
-
-    // MARK: - Awards (computed locally; backend awards table is v2 work)
-
-    private func earnedAwards(sightings: [Sighting], catCount: Int, streak: Int) -> [Award] {
-        let totalSightings = sightings.count
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
-        let spottedToday = sightings.contains { cal.isDate($0.seenAt, inSameDayAs: today) }
-        let nightOwl = sightings.contains { sighting in
-            let h = cal.component(.hour, from: sighting.seenAt)
-            return h < 6 || h >= 22
-        }
-
-        return [
-            Award(emoji: "🏅", label: "First Snap", rare: false, earned: totalSightings >= 1),
-            Award(emoji: "🔥", label: "10-day streak", rare: false, earned: streak >= 10),
-            Award(emoji: "★", label: "Legend", rare: true, earned: totalSightings >= 50),
-            Award(emoji: "🌙", label: "Night owl", rare: false, earned: nightOwl),
-            Award(emoji: "📚", label: "20 cats", rare: false, earned: catCount >= 20),
-            Award(emoji: "🎯", label: "Today's snap", rare: false, earned: spottedToday),
-            Award(emoji: "🤝", label: "5 cats", rare: false, earned: catCount >= 5),
-            Award(emoji: "🌧", label: "30 sightings", rare: false, earned: totalSightings >= 30),
-            Award(emoji: "?", label: "50 cats", rare: false, earned: catCount >= 50),
-            Award(emoji: "?", label: "100 day", rare: true, earned: streak >= 100),
-            Award(emoji: "?", label: "Mystery", rare: false, earned: false),
-            Award(emoji: "?", label: "???", rare: false, earned: false),
-        ]
-    }
-}
-
-private struct Award: Identifiable {
-    let id = UUID()
-    let emoji: String
-    let label: String
-    let rare: Bool
-    let earned: Bool
-}
-
-private struct AwardTile: View {
-    let award: Award
-
-    var body: some View {
-        VStack(spacing: 2) {
-            Text(award.earned ? award.emoji : "?")
-                .font(.system(size: 22))
-                .opacity(award.earned ? 1 : 0.4)
-            Text(award.label)
-                .font(.Brand.jakarta(.bold, size: 8))
-                .tracking(0.2)
-                .foregroundStyle(award.earned ? Color.ink : Color.stone)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-        }
-        .padding(4)
-        .frame(maxWidth: .infinity)
-        .aspectRatio(1, contentMode: .fit)
-        .background(background, in: .rect(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(award.rare && award.earned ? Color.ink : Color.stoneLight, lineWidth: 1)
-        )
-        .shadow(
-            color: award.rare && award.earned ? Color.ink.opacity(0.85) : .clear,
-            radius: 0, x: 2, y: 2
-        )
-        .opacity(award.earned ? 1 : 0.5)
-    }
-
-    private var background: Color {
-        if !award.earned { return Color.creamDeep }
-        if award.rare    { return Color.streetlampYellow }
-        return Color.creamSoft
-    }
 }

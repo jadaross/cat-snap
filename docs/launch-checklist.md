@@ -14,58 +14,56 @@ Earlier roadmap docs (Phase 0–3.5 build journal, design notes, competitive sca
 
 ---
 
-## 1. Functional changes I want to make first
+## 1. Functional changes I want to make first — ✅ shipped
 
-> _Map out any functional/product changes you want to land **before** the launch checklist work below. Anything here gets folded into the build before we start polishing._
+All eight sub-items below landed in one pass. Backend changes live in `supabase/migrations/0003_favorites_and_record_spot.sql` (favorites table, `record_spot` RPC, `guide_list` RPC, amended `sightings_near` with `p_favorites_only`). iOS changes touched the map, guide, cat profile, submit, awards, and tab bar — see `git log` for the diff range.
 
-### 1.1 Drop the "missing cat" framing
-- [ ] Remove the "missing cat" concept and the `?` placeholder from the Explore / guide views. A cat is either spotted or not-yet-spotted — never "missing".
-- [ ] Remove the progress bar growing at the top of the guide (it was tied to the missing-cat completion metric and no longer makes sense).
-- [ ] Audit copy across guide / explore / cat-profile for any remaining "missing" / "find me" wording and rewrite to "spotted" vs "not yet spotted".
+### 1.1 Drop the "missing cat" framing — ✅
+- [x] Removed the `?` placeholder from `GuideListView` — unspotted cells now show a low-opacity `CatWindowMark` silhouette.
+- [x] Removed the top-of-guide progress bar; the `N / total` count moved into the section header inline.
+- [x] Audited copy: "missing" → "not yet spotted" (cell footer, empty state, hero subtitle on `CatProfileView`).
 
-### 1.2 Cat profile entry points
-- [ ] Tapping a cat in the **Nearby cats** list (and any cat row in Explore / guide) opens that cat's profile. Confirm every cat-row tap target routes to `CatProfileView`, not just the highlighted ones.
-- [ ] From inside a cat's profile, tapping **Explore** in the tab bar returns the user to the **Map**, not back to the guide stack. (Pop to root + switch tab.)
+### 1.2 Cat profile entry points — ✅
+- [x] `NearbyCatsCard` row taps now `path.append(catId)` straight into `CatProfileView` (was: re-centre map + show `PinDetailCard`).
+- [x] Tapping the **Explore** tab while already on Explore posts `.popExploreToRoot`; both `MapView` and `GuideListView` reset their `path = NavigationPath()`, and `MainTabView` also forces `exploreView = .map`.
 
-### 1.3 "I spotted them" vs "Upload a sighting"
-- [ ] Split the current submit action into two distinct affordances on `CatProfileView`:
-  - **"I spotted them"** — quick, no-photo check-in. Logs the sighting (timestamp + location) and increments the spot count. No camera, no upload.
-  - **"Upload a sighting of <cat name>"** — the existing photo flow, but pre-filled with this cat (so it's adding a photo to a known cat, not creating a new one). The button label should interpolate the cat's actual name.
-- [ ] Schema/RPC check: `create_sighting_with_cat` currently expects a photo URL — needs a path (or a sibling RPC) that allows `photo_url IS NULL` for the no-photo check-in case. Confirm RLS + storage policies still hold.
+### 1.3 "I spotted them" vs "Upload a sighting" — ✅
+- [x] `CatProfileView` sticky CTA split into two buttons: coral "I spotted \<name\>" → `SpotConfirmSheet` (pin + `record_spot` RPC, no photo), and cream "upload a sighting of \<name\>" → existing `SubmitView(prefilledCatId:)`. Heart trailing on the primary row.
+- [x] New RPC `public.record_spot(p_cat_id, p_lat, p_lng, p_location_label, p_seen_at)` handles the no-photo path. `sightings.photo_url` relaxed to nullable; storage policies untouched (no upload happens on this path). `Sighting.photoUrl` on the Swift side is now `URL?` accordingly.
 
-### 1.4 Editable / pinnable sighting location
-- [ ] Today the sighting location comes from EXIF on the uploaded photo. Keep that as the default when a photo is uploaded, **but** let the user drop / drag a pin to override before submitting.
-- [ ] For the no-photo "I spotted them" flow, default to current device location and let the user adjust the pin before confirming.
-- [ ] Add a "change location" affordance on the submit screen (map preview with a draggable pin). Make sure the final write hits the `location geography(Point, 4326)` column via the typed insert path, not by parsing strings.
+### 1.4 Editable / pinnable sighting location — ✅
+- [x] `SubmitView` editor now shows a `MapPinPicker` map card above the name field; pan to reposition. "use my location" + "use photo location" cap-buttons revert the pin to the device fix or original EXIF location respectively.
+- [x] No-photo `SpotConfirmSheet` carries the same `MapPinPicker` (defaulting to current device location).
+- [x] Both flows continue to send `p_lat` / `p_lng` to the RPC — server-side `st_setsrid(st_makepoint(...), 4326)::geography` builds the typed point, no client-side geography modelling.
 
-### 1.5 Awards: bigger, tappable, explained
-- [ ] Increase award icon size on the user profile and tighten the spacing between awards — currently they read as small and over-spaced.
-- [ ] Each award is tappable and opens a sheet/popover with: award name, description, and the criteria for unlocking it ("spot 10 cats", "7-day streak", etc.).
-- [ ] Locked vs. unlocked treatment should still be visually distinct after the size change.
+### 1.5 Awards: bigger, tappable, explained — ✅
+- [x] Awards moved from `UserProfileView` private scope into `Features/UserProfile/Awards/` (`Award.swift`, `AwardCatalog.swift`, `AwardTile.swift`, `AwardDetailSheet.swift`).
+- [x] Grid 4 cols → 3 cols. Tile padding tightened (8 → 6). Emoji 22pt → 36pt. Label 8pt → 11pt.
+- [x] Tapping a tile opens `AwardDetailSheet` with name, description, "HOW TO EARN" criteria block, and earned/not-yet-earned badge. Locked treatment preserved (greyed emoji + dimmed background).
 
-### 1.6 Drop the today / week / all-time filter
-- [ ] Remove the today / week / all-time time-filter chips from the map (and any other surface they appear on). Default — and only — view is all-time.
-- [ ] Drop the related state, query params, and RPC arg(s); whatever currently powers the filter (likely a `since` / `time_window` parameter on `sightings_near`) gets simplified to always return all-time data.
-- [ ] Audit Section 4.3 tap-target list — the time-filter chips were called out there and that bullet can come out once the chips are gone.
+### 1.6 Drop the today / week / all-time filter — ✅
+- [x] `TimeFilter` enum, `timeFilterRow`, and `filteredSightings` removed from `MapView`. Map now reads `model.sightings` directly.
+- [x] `MapModel.fetch(...)` no longer accepts a time window. Empty-state title simplified to "no cats spotted nearby" / "no favourites in this area".
 
-### 1.7 Favorites (heart) + favorites filter
-- [ ] Add a heart / favorite toggle on `CatProfileView` (and inline on cat rows where it fits).
-- [ ] Filter on the **Guide / Explore** view: "show favorites only".
-- [ ] Filter on the **Map** view: "show favorites only" — same heart button, hides non-favorited pins.
-- [ ] Schema: add a `favorites` table (`user_id`, `cat_id`, `created_at`, PK on the pair) with RLS — `auth.uid() = user_id` for all CRUD. Update `sightings_near` and the guide RPC to either join favorites or accept a `favorites_only` flag.
+### 1.7 Favorites (heart) + favorites filter — ✅
+- [x] `CatProfileModel.toggleFavorite()` writes to `public.favorites` (insert / delete) with optimistic UI flip. Heart button on `CatProfileView` wired (filled coral when favourited).
+- [x] Map favourites toggle: heart button in the top-right control column. Sets `favoritesOnly`, refetches `sightings_near` with `p_favorites_only: true`.
+- [x] Guide quick-filter chips replaced: `All` / `♥ Favourites` / `Not yet spotted`.
+- [x] Schema: `favorites(user_id, cat_id, created_at)` table with RLS limited to `auth.uid() = user_id`. `sightings_near` now joins favourites and exposes `is_favorite`. `guide_list` does the same per-row.
 
-### 1.8 Guide: filter by cat attributes, location, time, etc.
-- [ ] Add a filter affordance to the guide that supports combining multiple criteria:
-  - **Attributes** — rarity (common / uncommon / rare / legendary), colour / pattern, any tag fields surfaced via `sighting_tags`.
-  - **Location** — within a chosen radius of a point (current location or a dropped pin), or by a coarse area filter.
-  - **Time** — first-spotted / last-spotted within a date range. (Independent of the removed map time-filter chips — this is a guide-only, opt-in control.)
-  - **Status** — spotted vs not-yet-spotted (replaces the old "missing" framing); favorites-only stacks on top from 1.7.
-- [ ] Filter state should be ephemeral (resets on app relaunch is fine for v1) and visible — surface active filters as removable chips above the grid.
-- [ ] Schema/RPC: extend the guide RPC with optional filter args rather than building a separate one. Confirm RLS still applies and the query plan stays sane (PostGIS index for the radius case, btree on `cats.rarity`).
+### 1.8 Guide: filter by cat attributes, location, time, etc. — ✅
+- [x] `GuideFilterSheet` covers status / rarity / tags / time / area / favourites. Reuses `MapPinPicker` + a slider for the area filter.
+- [x] Active filters render as removable coral chips above the grid (`GuideListView.activeFilterChips`).
+- [x] `guide_list` RPC takes optional args for every axis; defaults are no-op so the un-filtered call returns the full catalog. Block-pair filtering is symmetric (RPC is `security definer`, deliberately, so the second OR clause actually catches incoming blocks — `sightings_near` was switched to `security definer` for the same reason while we were there; flag for the security audit but the behaviour is now consistent and stricter).
 
-### 1.9 Cross-cutting follow-ups (after the above land)
-- [ ] Re-walk Section 4 (UI/UX pass) once these changes settle — copy, empty states, and tap-target audits all shift.
-- [ ] Update `docs/new-schema.sql` to reflect the new `favorites` table and any RPC changes.
+### 1.9 Cross-cutting follow-ups — partially done, the rest moves into Sections 2–4
+- [x] `docs/new-schema.sql` updated with the favourites table, `record_spot`, `guide_list`, and the amended `sightings_near` signature.
+- [ ] Re-walk Section 4 (UI/UX pass) — copy, empty states, and tap-target audits have shifted; do as part of the regular UI/UX pass below. **In particular, Section 4.3 lost the "time-filter chip" tap-target bullet (chips removed); add to-do: validate the new heart toggle, filter icon, and active-filter-chip X buttons all clear 44×44 pt.**
+
+### 1.10 Known follow-ups & advisor notes (carry into Sections 2 / 3)
+- Supabase advisor flagged the new `record_spot`, `guide_list`, and amended `sightings_near` as `SECURITY DEFINER` callable by `authenticated` (and `sightings_near` / `guide_list` by `anon`, by design — same pattern as the other read RPCs). `record_spot` is correctly revoked from `anon`.
+- Pre-existing advisor warnings (PostGIS `st_estimatedextent` SECURITY DEFINER, `spatial_ref_sys` RLS off, `extension_in_public` for PostGIS, all `pg_graphql_*_table_exposed` lint warnings) are unchanged by this migration — keep tracking under Section 3.
+- The `friend_activity` RPC (migration 0002) still uses `language sql stable` without `security definer`, so its symmetric-block filter only catches outgoing blocks. Consistency follow-up for the security audit; not a blocker for this functional drop.
 
 ---
 

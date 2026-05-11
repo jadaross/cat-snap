@@ -1,6 +1,6 @@
 import Foundation
 
-struct Cat: Codable, Identifiable, Hashable {
+struct Cat: Codable, Identifiable, Hashable, Sendable {
     let id: UUID
     var createdBy: UUID?
     var name: String?
@@ -10,7 +10,7 @@ struct Cat: Codable, Identifiable, Hashable {
     let createdAt: Date
     let updatedAt: Date
 
-    enum Rarity: String, Codable, CaseIterable, Hashable {
+    enum Rarity: String, Codable, CaseIterable, Hashable, Sendable {
         case common, uncommon, rare, legendary
     }
 

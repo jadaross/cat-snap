@@ -4,11 +4,14 @@ import Foundation
 // Note: the PostGIS `location` column is intentionally not modelled here —
 // for reads we use the `sightings_near` RPC (see NearbySighting below); for
 // inserts we'll send a server-side ST_MakePoint via a typed insert helper.
-struct Sighting: Codable, Identifiable, Hashable {
+//
+// `photoUrl` is optional because the no-photo "I spotted them" check-in
+// (record_spot RPC, migration 0003) writes a sighting with photo_url = null.
+struct Sighting: Codable, Identifiable, Hashable, Sendable {
     let id: UUID
     let userId: UUID
     var catId: UUID?
-    var photoUrl: URL
+    var photoUrl: URL?
     var locationLabel: String?
     var notes: String?
     var seenAt: Date
@@ -26,12 +29,13 @@ struct Sighting: Codable, Identifiable, Hashable {
     }
 }
 
-// Matches the return shape of the `public.sightings_near` RPC.
-struct NearbySighting: Codable, Identifiable, Hashable {
+// Matches the return shape of the `public.sightings_near` RPC (migration 0003
+// added `is_favorite` to the column list).
+struct NearbySighting: Codable, Identifiable, Hashable, Sendable {
     let id: UUID
     let userId: UUID
     let catId: UUID?
-    let photoUrl: URL
+    let photoUrl: URL?
     let locationLabel: String?
     let notes: String?
     let seenAt: Date
@@ -44,6 +48,7 @@ struct NearbySighting: Codable, Identifiable, Hashable {
     let displayName: String?
     let avatarUrl: URL?
     let distanceM: Double
+    let isFavorite: Bool
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -62,5 +67,6 @@ struct NearbySighting: Codable, Identifiable, Hashable {
         case displayName    = "display_name"
         case avatarUrl      = "avatar_url"
         case distanceM      = "distance_m"
+        case isFavorite     = "is_favorite"
     }
 }

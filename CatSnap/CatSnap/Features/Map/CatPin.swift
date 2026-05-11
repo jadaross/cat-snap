@@ -6,7 +6,7 @@ import SwiftUI
 struct CatPin: View {
     let photoUrl: URL?
     var isSelected: Bool = false
-    var size: CGFloat = 46
+    var size: CGFloat = 84
 
     var body: some View {
         let outerSize = isSelected ? size * 1.13 : size
