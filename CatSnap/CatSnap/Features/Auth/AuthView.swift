@@ -10,7 +10,7 @@ struct AuthView: View {
     @State private var isWorking = false
     @State private var error: String?
     @State private var info: String?
-    @State private var currentNonce: String?
+    @State private var apple = AppleSignIn()
 
     enum Mode { case signIn, signUp }
 
@@ -25,10 +25,7 @@ struct AuthView: View {
                 Wordmark(size: 44)
 
                 SignInWithAppleButton(.signIn) { request in
-                    let raw = AppleSignIn.makeNonce()
-                    currentNonce = raw
-                    request.requestedScopes = [.fullName, .email]
-                    request.nonce = AppleSignIn.sha256Hex(raw)
+                    apple.configure(request)
                 } onCompletion: { result in
                     handleApple(result)
                 }
@@ -135,33 +132,13 @@ struct AuthView: View {
     private func handleApple(_ result: Result<ASAuthorization, Error>) {
         error = nil
         info = nil
-        switch result {
-        case .failure(let err):
-            // User-cancelled is a normal abort, not an error. Other failures
-            // (network, malformed credential, no iCloud account on simulator)
-            // surface to the user.
-            if let asError = err as? ASAuthorizationError, asError.code == .canceled {
-                currentNonce = nil
-                return
-            }
-            currentNonce = nil
-            self.error = err.localizedDescription
-        case .success(let authorization):
-            guard let raw = currentNonce else {
-                self.error = "Sign in with Apple: missing nonce. Please try again."
-                return
-            }
-            isWorking = true
-            Task {
-                defer {
-                    isWorking = false
-                    currentNonce = nil
-                }
-                do {
-                    try await AppleSignIn.exchange(authorization: authorization, rawNonce: raw)
-                } catch {
-                    self.error = error.localizedDescription
-                }
+        isWorking = true
+        Task {
+            defer { isWorking = false }
+            do {
+                _ = try await apple.complete(result)
+            } catch {
+                self.error = error.localizedDescription
             }
         }
     }

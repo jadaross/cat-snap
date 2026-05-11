@@ -11,12 +11,55 @@ import Supabase
 //
 // Apple revocation on account deletion (App Store Review 5.1.1(v)) is
 // deferred — see launch-checklist.md §5 A3.
+//
+// One instance owns the per-attempt raw nonce that bridges
+// `SignInWithAppleButton`'s request closure → completion closure, so the
+// caller doesn't have to thread that state through the view layer.
 @MainActor
-enum AppleSignIn {
+final class AppleSignIn {
+    enum Outcome {
+        case signedIn
+        case userCanceled
+    }
+
+    private var pendingRawNonce: String?
+
+    /// Wires nonce + scopes onto Apple's request. Call from
+    /// `SignInWithAppleButton`'s request closure.
+    func configure(_ request: ASAuthorizationAppleIDRequest) {
+        let raw = Self.makeNonce()
+        pendingRawNonce = raw
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = Self.sha256Hex(raw)
+    }
+
+    /// Consumes the button's completion result. Returns `.userCanceled`
+    /// when the user dismissed the sheet (a normal abort, not an error);
+    /// throws for malformed credentials, missing tokens, or transport
+    /// failures. On success, the user is signed in to Supabase.
+    func complete(_ result: Result<ASAuthorization, Error>) async throws -> Outcome {
+        let raw = pendingRawNonce
+        pendingRawNonce = nil
+
+        switch result {
+        case .failure(let err):
+            if let asError = err as? ASAuthorizationError, asError.code == .canceled {
+                return .userCanceled
+            }
+            throw err
+        case .success(let authorization):
+            guard let raw else { throw AppleSignInError.missingNonce }
+            try await Self.exchange(authorization: authorization, rawNonce: raw)
+            return .signedIn
+        }
+    }
+
+    // MARK: - Internals
+
     /// 32 random bytes, base64url-encoded. The raw value is what Supabase
     /// compares against the `nonce` claim in Apple's JWT; the SHA-256 of
     /// this value is what we send to Apple.
-    static func makeNonce() -> String {
+    private static func makeNonce() -> String {
         var bytes = [UInt8](repeating: 0, count: 32)
         let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
         guard status == errSecSuccess else {
@@ -29,13 +72,13 @@ enum AppleSignIn {
             .replacingOccurrences(of: "=", with: "")
     }
 
-    static func sha256Hex(_ raw: String) -> String {
+    private static func sha256Hex(_ raw: String) -> String {
         SHA256.hash(data: Data(raw.utf8))
             .map { String(format: "%02x", $0) }
             .joined()
     }
 
-    static func exchange(authorization: ASAuthorization, rawNonce: String) async throws {
+    private static func exchange(authorization: ASAuthorization, rawNonce: String) async throws {
         guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
             throw AppleSignInError.malformedCredential
         }
@@ -103,6 +146,7 @@ enum AppleSignIn {
 enum AppleSignInError: LocalizedError {
     case malformedCredential
     case missingIdentityToken
+    case missingNonce
 
     var errorDescription: String? {
         switch self {
@@ -110,6 +154,8 @@ enum AppleSignInError: LocalizedError {
             return "Couldn't read your Apple credential. Please try again."
         case .missingIdentityToken:
             return "Apple didn't return a token. Please try again."
+        case .missingNonce:
+            return "Sign in with Apple: missing nonce. Please try again."
         }
     }
 }
