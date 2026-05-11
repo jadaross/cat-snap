@@ -6,7 +6,6 @@ import SwiftUI
 struct AddFriendsView: View {
     @Environment(\.dismiss) private var dismiss
 
-    @State private var model = FriendsModel()
     @State private var query: String = ""
     @State private var results: [ProfileSearchResult] = []
     @State private var isSearching = false
@@ -132,7 +131,7 @@ struct AddFriendsView: View {
             if Task.isCancelled { return }
             isSearching = true
             do {
-                results = try await model.search(query: trimmed)
+                results = try await FriendsGraph.search(query: trimmed)
                 error = nil
             } catch {
                 self.error = error.localizedDescription
@@ -143,7 +142,7 @@ struct AddFriendsView: View {
 
     private func follow(_ profile: ProfileSearchResult) async {
         do {
-            try await model.follow(userId: profile.userId)
+            try await FriendsGraph.follow(userId: profile.userId)
             updateRow(profile.userId, isFollowing: true)
         } catch {
             self.error = error.localizedDescription
@@ -152,7 +151,7 @@ struct AddFriendsView: View {
 
     private func unfollow(_ profile: ProfileSearchResult) async {
         do {
-            try await model.unfollow(userId: profile.userId)
+            try await FriendsGraph.unfollow(userId: profile.userId)
             updateRow(profile.userId, isFollowing: false)
         } catch {
             self.error = error.localizedDescription

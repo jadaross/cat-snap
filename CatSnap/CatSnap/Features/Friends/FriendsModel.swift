@@ -1,7 +1,9 @@
 import Foundation
-import Supabase
-import PostgREST
 
+// View-model for screens that show the user's friends list and recent
+// friend activity. Stateless graph operations live in `FriendsGraph` —
+// this type owns only the `@Observable` state and the local-cache mirror
+// after `block(...)` so the UI updates without a re-fetch.
 @MainActor
 @Observable
 final class FriendsModel {
@@ -15,10 +17,7 @@ final class FriendsModel {
         isLoadingFriends = true
         defer { isLoadingFriends = false }
         do {
-            friends = try await supabase
-                .rpc("my_friends")
-                .execute()
-                .value
+            friends = try await FriendsGraph.myFriends()
             error = nil
         } catch {
             self.error = error.localizedDescription
@@ -29,84 +28,18 @@ final class FriendsModel {
         isLoadingActivity = true
         defer { isLoadingActivity = false }
         do {
-            activity = try await supabase
-                .rpc("friend_activity", params: ["p_limit": limit])
-                .execute()
-                .value
+            activity = try await FriendsGraph.friendActivity(limit: limit)
             error = nil
         } catch {
             self.error = error.localizedDescription
         }
     }
 
-    func follow(userId: UUID) async throws {
-        let me = try await supabase.auth.session.user.id
-        struct Row: Encodable { let follower_id: UUID; let followee_id: UUID }
-        try await supabase
-            .from("follows")
-            .insert(Row(follower_id: me, followee_id: userId))
-            .execute()
-    }
-
-    func unfollow(userId: UUID) async throws {
-        let me = try await supabase.auth.session.user.id
-        try await supabase
-            .from("follows")
-            .delete()
-            .eq("follower_id", value: me)
-            .eq("followee_id", value: userId)
-            .execute()
-    }
-
-    func search(query: String, limit: Int = 20) async throws -> [ProfileSearchResult] {
-        struct Params: Encodable { let p_query: String; let p_limit: Int }
-        return try await supabase
-            .rpc("search_profiles", params: Params(p_query: query, p_limit: limit))
-            .execute()
-            .value
-    }
-
     func block(userId: UUID) async throws {
-        let me = try await supabase.auth.session.user.id
-        struct Row: Encodable { let blocker_id: UUID; let blocked_id: UUID }
-        try await supabase
-            .from("blocks")
-            .insert(Row(blocker_id: me, blocked_id: userId))
-            .execute()
-        // The RPCs filter symmetrically server-side, but mirror the change
-        // locally so the UI updates without a re-fetch.
+        try await FriendsGraph.block(userId: userId)
+        // The read RPCs filter blocked pairs server-side; mirror locally
+        // so the UI updates immediately without a refetch.
         activity.removeAll { $0.userId == userId }
         friends.removeAll { $0.userId == userId }
-    }
-
-    func unblock(userId: UUID) async throws {
-        let me = try await supabase.auth.session.user.id
-        try await supabase
-            .from("blocks")
-            .delete()
-            .eq("blocker_id", value: me)
-            .eq("blocked_id", value: userId)
-            .execute()
-    }
-
-    func report(targetType: String, targetId: UUID, reason: String, details: String?) async throws {
-        let me = try await supabase.auth.session.user.id
-        struct Row: Encodable {
-            let reporter_id: UUID
-            let target_type: String
-            let target_id: UUID
-            let reason: String
-            let details: String?
-        }
-        try await supabase
-            .from("reports")
-            .insert(Row(
-                reporter_id: me,
-                target_type: targetType,
-                target_id: targetId,
-                reason: reason,
-                details: details
-            ))
-            .execute()
     }
 }

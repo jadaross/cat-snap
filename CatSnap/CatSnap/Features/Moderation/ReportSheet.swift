@@ -69,8 +69,6 @@ struct ReportSheet: View {
     @State private var isSubmitting = false
     @State private var errorMessage: String?
 
-    private let model = FriendsModel()
-
     var body: some View {
         NavigationStack {
             ZStack {
@@ -184,7 +182,7 @@ struct ReportSheet: View {
         defer { isSubmitting = false }
         do {
             let trimmed = details.trimmingCharacters(in: .whitespacesAndNewlines)
-            try await model.report(
+            try await FriendsGraph.report(
                 targetType: target.dbType,
                 targetId: target.dbId,
                 reason: reason.rawValue,
