@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (iOS Simulator)
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # CatSnap.xcconfig is gitignored because it holds the Supabase keys.
+      # CI only needs the build to compile, and the keys are read at runtime,
+      # so the committed template is enough. A build that reaches "BUILD
+      # SUCCEEDED" with placeholder values still proves the code compiles.
+      - name: Create xcconfig from template
+        run: cp CatSnap/CatSnap/CatSnap.example.xcconfig CatSnap/CatSnap/CatSnap.xcconfig
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project CatSnap/CatSnap.xcodeproj \
+            -scheme CatSnap \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Test
+        run: |
+          set -o pipefail
+          if xcodebuild -project CatSnap/CatSnap.xcodeproj -list | grep -q CatSnapTests; then
+            xcodebuild \
+              -project CatSnap/CatSnap.xcodeproj \
+              -scheme CatSnap \
+              -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+              CODE_SIGNING_ALLOWED=NO \
+              test
+          else
+            echo "No test target yet — skipping."
+          fi
