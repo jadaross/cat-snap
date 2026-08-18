@@ -9,37 +9,43 @@
 
 -- ------------------------------------------------------------
 -- 1. Sightings rate limit: 50 sightings per user per day
--- Uses a partial index to count sightings created today per user.
--- The index is maintained only for recent sightings, keeping it small.
+-- Uses a trigger-based approach to avoid IMMUTABLE function requirements
 -- ------------------------------------------------------------
 
--- Create a partial index on sightings for today's records per user
--- This index supports efficient counting of daily sightings per user
-create index if not exists sightings_user_created_at_idx
-  on public.sightings(user_id, created_at)
-  where created_at >= current_date;
+-- Create a function to check daily sighting limit
+create or replace function public.check_sightings_daily_limit()
+returns trigger
+language plpgsql
+as $$
+declare
+  daily_count integer;
+begin
+  -- Count sightings created by this user today (UTC)
+  select count(*) into daily_count
+  from public.sightings
+  where user_id = new.user_id
+    and date(created_at at time zone 'utc') = date(now() at time zone 'utc');
+  
+  -- Raise exception if limit exceeded
+  if daily_count >= 50 then
+    raise exception 'Daily sighting limit of 50 exceeded' using errcode = '23514';
+  end if;
+  
+  return new;
+end;
+$$;
 
--- Create a check constraint that prevents users from exceeding 50 sightings/day
--- This is enforced at the database level, not just client-side
+-- Create trigger to enforce the limit
 do $$
 begin
   if not exists (
-    select 1 from pg_constraint 
-    where conname = 'sightings_daily_limit_check' 
-    and conrelid = 'public.sightings'::regclass
+    select 1 from pg_trigger 
+    where tgname = 'enforce_sightings_daily_limit'
   ) then
-    alter table public.sightings
-      add constraint sightings_daily_limit_check
-      check (
-        -- Allow the row if it's the first sighting for this user today
-        -- or if the user has fewer than 50 sightings today (excluding this row)
-        (
-          select count(*)
-          from public.sightings s2
-          where s2.user_id = public.sightings.user_id
-            and s2.created_at >= current_date
-        ) < 50
-      );
+    create trigger enforce_sightings_daily_limit
+      before insert on public.sightings
+      for each row
+      execute function public.check_sightings_daily_limit();
   end if;
 end $$;
 
@@ -87,25 +93,40 @@ begin
   end if;
 end $$;
 
--- Add a check constraint to limit total follows per user to 1000
+-- Add a function to check follows limit and trigger to enforce it
 -- This prevents a user from following more than 1000 other users
+create or replace function public.check_follows_limit()
+returns trigger
+language plpgsql
+as $$
+declare
+  follow_count integer;
+begin
+  -- Count total follows for this user
+  select count(*) into follow_count
+  from public.follows
+  where follower_id = new.follower_id;
+  
+  -- Raise exception if limit exceeded
+  if follow_count >= 1000 then
+    raise exception 'Follow limit of 1000 exceeded' using errcode = '23514';
+  end if;
+  
+  return new;
+end;
+$$;
+
+-- Create trigger to enforce the follows limit
 do $$
 begin
   if not exists (
-    select 1 from pg_constraint 
-    where conname = 'follows_total_limit_check' 
-    and conrelid = 'public.follows'::regclass
+    select 1 from pg_trigger 
+    where tgname = 'enforce_follows_limit'
   ) then
-    alter table public.follows
-      add constraint follows_total_limit_check
-      check (
-        -- Allow the row if the follower has fewer than 1000 follows (excluding this row)
-        (
-          select count(*)
-          from public.follows f2
-          where f2.follower_id = public.follows.follower_id
-        ) < 1000
-      );
+    create trigger enforce_follows_limit
+      before insert on public.follows
+      for each row
+      execute function public.check_follows_limit();
   end if;
 end $$;
 
@@ -163,29 +184,17 @@ end $$;
 -- 5. Add helpful comments for documentation
 -- ------------------------------------------------------------
 
-do $$
-begin
-  if exists (
-    select 1 from pg_constraint 
-    where conname = 'sightings_daily_limit_check' 
-    and conrelid = 'public.sightings'::regclass
-  ) then
-    comment on constraint sightings_daily_limit_check on public.sightings is
-      'Prevents users from creating more than 50 sightings per day. Counted from midnight UTC.';
-  end if;
-end $$;
+comment on function public.check_sightings_daily_limit is
+  'Trigger function to enforce 50 sightings per day limit per user. Raises exception when limit exceeded.';
 
-do $$
-begin
-  if exists (
-    select 1 from pg_constraint 
-    where conname = 'follows_total_limit_check' 
-    and conrelid = 'public.follows'::regclass
-  ) then
-    comment on constraint follows_total_limit_check on public.follows is
-      'Prevents users from following more than 1000 other users total.';
-  end if;
-end $$;
+comment on trigger enforce_sightings_daily_limit on public.sightings is
+  'Enforces daily sighting limit of 50 per user via check_sightings_daily_limit function.';
+
+comment on function public.check_follows_limit is
+  'Trigger function to enforce 1000 total follows limit per user. Raises exception when limit exceeded.';
+
+comment on trigger enforce_follows_limit on public.follows is
+  'Enforces follows limit of 1000 per user via check_follows_limit function.';
 
 do $$
 begin
