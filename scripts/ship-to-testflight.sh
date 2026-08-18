@@ -184,9 +184,9 @@ finish() {
 # STAGES
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=7
+TOTAL_STAGES=8
 
-# Cat-Snap keeps build config in an xcconfig, not a .env.
+# CatSnap keeps build config in an xcconfig, not a .env.
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="$REPO_ROOT/CatSnap/CatSnap/CatSnap.xcconfig"
 XCODEPROJ="$REPO_ROOT/CatSnap/CatSnap.xcodeproj"
@@ -194,7 +194,7 @@ TEAM_ID="DFFRB59G23"
 BUNDLE_ID="com.jadaross.CatSnap"
 SUPABASE_REF="wgtjtvxpxalyeukgxbpo"
 
-banner "Cat-Snap → TestFlight"
+banner "CatSnap → TestFlight"
 
 # ── 1 ─────────────────────────────────────────────────────────────────────
 stage "Accept the App Store Connect Terms of Service"
@@ -221,7 +221,7 @@ printf '\n'
 open_url "https://appstoreconnect.apple.com/apps"
 step "Click the blue + button (top-left, next to 'Apps') → 'New App'."
 step "Platform:          tick iOS"
-step "Name:              Cat-Snap"
+step "Name:              CatSnap   (no hyphen)"
 step "Primary Language:  English (U.K.) or English (U.S.)"
 step "Bundle ID:         pick $BUNDLE_ID from the dropdown"
 step "SKU:               CATSNAP001"
@@ -231,7 +231,7 @@ printf '\n'
 note "If the Bundle ID dropdown is empty, the ToS step above didn't fully"
 note "complete — reload the page and check."
 printf '\n'
-if confirm "Is the Cat-Snap app record created?"; then
+if confirm "Is the CatSnap app record created?"; then
   say "Good — builds will now have somewhere to appear."
 else
   SKIPPED+=("Create the App Store Connect app record")
@@ -239,6 +239,36 @@ else
 fi
 
 # ── 3 ─────────────────────────────────────────────────────────────────────
+stage "Declare EU Digital Services Act trader status"
+say "App Store Connect → Business shows a RED banner: trader status is not"
+say "declared. Your account distributes to 175 countries, which includes the"
+say "EU, and the DSA requires Apple to verify and publicly display trader"
+say "contact details for anyone distributing there."
+printf '\n'
+warn "Undeclared = your app cannot be made available in the EU at all."
+printf '\n'
+open_url "https://appstoreconnect.apple.com/business"
+step "Click 'Complete Compliance Requirements' in the red banner."
+step "Answer whether you are acting as a trader."
+note "  Roughly: 'trader' means distributing commercially rather than as a"
+note "  hobbyist. A free app with no revenue is often non-trader, but this is"
+note "  a legal declaration about YOUR circumstances — read Apple's guidance"
+note "  and answer for your own situation. Do not guess."
+step "If you declare as a trader, supply the contact details Apple will"
+step "  publish on your App Store listing (address, phone, email)."
+step "Submit."
+printf '\n'
+note "The address on file is currently: 17 Sovereign Mews, London E2 8ER."
+note "Whatever you enter here becomes PUBLIC on your store listing."
+printf '\n'
+if confirm "Is trader status declared (red banner gone)?"; then
+  say "EU distribution unblocked."
+else
+  SKIPPED+=("Declare DSA trader status — required for EU availability")
+  warn "You can still upload to TestFlight, but not ship to the EU."
+fi
+
+# ── 4 ─────────────────────────────────────────────────────────────────────
 stage "Register your iPhone"
 say "Your Apple team has ZERO registered devices right now, so Xcode cannot"
 say "generate a provisioning profile. Archiving fails with:"
@@ -260,7 +290,7 @@ else
   warn "Archiving will likely fail until a device is registered."
 fi
 
-# ── 4 ─────────────────────────────────────────────────────────────────────
+# ── 5 ─────────────────────────────────────────────────────────────────────
 stage "Sentry DSN (optional, but do it before you build)"
 say "The Sentry SDK is wired up, but no DSN is configured — so crash"
 say "reporting silently does nothing. Without it, TestFlight flies blind."
@@ -268,7 +298,7 @@ say "The DSN is baked in at build time, so set it BEFORE archiving."
 printf '\n'
 if confirm "Do you want to configure Sentry now? (No = skip)"; then
   open_url "https://sentry.io/settings/projects/"
-  step "Pick (or create) your Cat-Snap iOS project."
+  step "Pick (or create) your CatSnap iOS project."
   step "Go to: Settings → Client Keys (DSN)."
   step "Copy the DSN — it looks like https://abc123@o1234.ingest.sentry.io/5678"
   printf '\n'
@@ -289,7 +319,7 @@ else
   note "Skipped. The app handles a missing DSN gracefully."
 fi
 
-# ── 5 ─────────────────────────────────────────────────────────────────────
+# ── 6 ─────────────────────────────────────────────────────────────────────
 stage "Supabase SMTP"
 say "Email confirmation is ON, but no SMTP provider is wired up. Supabase's"
 say "built-in SMTP is heavily rate-limited and lands in spam — your first"
@@ -301,7 +331,7 @@ step "Sign up at resend.com (free tier) if you have no provider yet."
 step "Host: smtp.resend.com   Port: 465   Username: resend"
 step "Password: your Resend API key."
 step "Sender email: something on a domain you control (e.g. catsnap.app)."
-step "Sender name: Cat-Snap"
+step "Sender name: CatSnap"
 step "Click Save."
 printf '\n'
 note "Resend needs you to verify the sending domain via DNS records first."
@@ -313,7 +343,7 @@ else
   note "Fine to defer for internal testing — fix before external testers."
 fi
 
-# ── 6 ─────────────────────────────────────────────────────────────────────
+# ── 7 ─────────────────────────────────────────────────────────────────────
 stage "Archive and upload from Xcode"
 say "This must go through the Xcode GUI. Automatic signing cannot be driven"
 say "from the command line, so there is no scriptable path here."
@@ -340,12 +370,12 @@ else
   warn "Nothing will appear in TestFlight until this succeeds."
 fi
 
-# ── 7 ─────────────────────────────────────────────────────────────────────
+# ── 8 ─────────────────────────────────────────────────────────────────────
 stage "Confirm the build in TestFlight"
 say "Apple processes the upload for 5-15 minutes before it appears."
 printf '\n'
 open_url "https://appstoreconnect.apple.com/apps"
-step "Open Cat-Snap → TestFlight tab."
+step "Open CatSnap → TestFlight tab."
 step "Wait for the build to move from 'Processing' to 'Ready to Submit'."
 printf '\n'
 note "You should NOT be asked about export compliance — this repo already"

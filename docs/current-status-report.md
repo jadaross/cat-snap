@@ -17,6 +17,7 @@ never verified against a build. **The tree did not compile.** Corrected below.
 | Privacy policy live | https://jadaross.github.io/cat-snap/privacy-policy.html → 200 |
 | Terms live | https://jadaross.github.io/cat-snap/terms-of-service.html → 200 |
 | App icon | 1024×1024 present in the asset catalog |
+| App Store name | **CatSnap** — no hyphen (decided 18 Aug 2026) |
 | Support domain | `catsnap.app` resolves, MX (Namecheap forwarding) configured |
 | Account deletion, block/report | Shipped — see launch-checklist.md §5 A1/A2 |
 
@@ -42,11 +43,10 @@ under `/docs/`. **Both in-app links were 404ing.** Copied to the publishing root
 
 ## Blockers — must be done by hand
 
-### 1. Accept the App Store Connect Terms of Service — HARD BLOCKER
+### 1. Accept the App Store Connect Terms of Service — ✅ DONE 18 Aug 2026
 
-https://appstoreconnect.apple.com is showing a full-page Terms of Service
-modal. Nothing can proceed until it is accepted: no app record, no build
-upload, no TestFlight. This is a legal agreement and must be accepted by you.
+Accepted. This also activated the Free Apps Agreement
+(18 Aug 2026 – 30 Apr 2027), which is what permits free-app distribution.
 
 ### 2. Install Xcode's iOS platform — DONE, but note the cause
 
@@ -75,10 +75,24 @@ Automatic signing cannot be overridden from the command line, so the archive
 must go through Xcode: **Product → Archive → Distribute App → App Store Connect**.
 CLI archiving would require switching the project to manual signing.
 
-### 6. Create the App Store Connect record
+### 6. Create the App Store Connect record — ✅ DONE 18 Aug 2026
 
-Blocked on step 1. Then: My Apps → + → New App. Platform iOS, name Cat-Snap,
-bundle ID `com.jadaross.CatSnap`, SKU `CATSNAP001`, primary language English.
+Created as **CatSnap** (no hyphen), iOS, English (U.K.), bundle ID
+`com.jadaross.CatSnap`, SKU `CATSNAP001`. Status: "Prepare for Submission".
+
+Note there are two bundle IDs on the account — `com.jadaross.cat-snap` is a
+leftover from the retired web project and is *not* the one to use.
+
+### 7. Declare EU Digital Services Act trader status — BLOCKS EU RELEASE
+
+App Store Connect → Business shows a red banner: trader status is undeclared.
+The account distributes to 175 countries, which includes the EU, and the DSA
+requires Apple to verify and publicly display trader contact details for
+anyone distributing there. Undeclared means the app cannot be listed in the EU.
+
+This is a legal declaration about your own circumstances and the contact
+details you supply are published on the store listing, so it has to be you.
+TestFlight still works without it.
 
 ---
 
@@ -109,13 +123,17 @@ bundle ID `com.jadaross.CatSnap`, SKU `CATSNAP001`, primary language English.
 
 ## Order to do things in
 
-1. Accept the App Store Connect ToS.
-2. Plug in your iPhone so it gets registered.
-3. Xcode → Product → Archive. Let it create the distribution certificate.
-4. Create the App Store Connect record.
-5. Distribute App → App Store Connect → upload.
-6. Wire SMTP + Sentry DSN while the build processes.
-7. Internal TestFlight, daily-drive it, seed real data.
-8. Capture 6.9" screenshots from the seeded app.
-9. Fill in description, keywords, privacy nutrition labels, support URL.
-10. Submit.
+1. ~~Accept the App Store Connect ToS.~~ done
+2. ~~Create the App Store Connect record.~~ done — CatSnap
+3. Declare DSA trader status (Business tab) — needed for EU release.
+4. Plug in your iPhone so it gets registered.
+5. Set the Sentry DSN before building (it is baked in at build time).
+6. Xcode → Product → Archive. Let it create the distribution certificate.
+7. Distribute App → App Store Connect → upload.
+8. Wire Supabase SMTP while the build processes.
+9. Internal TestFlight, daily-drive it, seed real data.
+10. Capture 6.9" screenshots from the seeded app.
+11. Fill in description, keywords, privacy nutrition labels, support URL.
+12. Submit.
+
+Run `./scripts/ship-to-testflight.sh` to be walked through steps 3-9.
