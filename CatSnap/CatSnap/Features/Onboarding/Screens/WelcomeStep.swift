@@ -14,14 +14,14 @@ struct WelcomeStep: View {
 
                 CatWindowMark(size: 180, blink: true)
 
-                Text("spot every\ncat.")
+                Text(String(localized: "spot every\ncat."))
                     .font(.Brand.frauncesBlackItalic(size: 44))
                     .foregroundStyle(Color.ink)
                     .tracking(-1.6)
                     .multilineTextAlignment(.center)
                     .padding(.top, 32)
 
-                Text("A field guide for the curious. Snap the cats in your neighbourhood — they all have stories.")
+                Text(String(localized: "A field guide for the curious. Snap the cats in your neighbourhood — they all have stories."))
                     .font(.Brand.jakarta(.medium, size: 16))
                     .foregroundStyle(Color.stone)
                     .multilineTextAlignment(.center)
@@ -33,8 +33,8 @@ struct WelcomeStep: View {
 
                 VStack(spacing: 14) {
                     OnboardingDots(activeIndex: 0, count: 9)
-                    OnboardingPrimaryButton(title: "Get started →", action: onAdvance)
-                    OnboardingTextButton(title: "I already have an account", action: onAlreadyHaveAccount)
+                    OnboardingPrimaryButton(title: String(localized: "Get started →"), action: onAdvance)
+                    OnboardingTextButton(title: String(localized: "I already have an account"), action: onAlreadyHaveAccount)
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 32)

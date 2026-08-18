@@ -57,15 +57,15 @@ struct LocationPermissionStep: View {
                 .frame(height: 280)
 
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("PERMISSIONS")
+                    Text(String(localized: "PERMISSIONS"))
                         .font(.Brand.mono(size: 11))
                         .foregroundStyle(Color.stone)
                         .tracking(1.4)
-                    Text("show me cats\nnearby.")
+                    Text(String(localized: "show me cats\nnearby."))
                         .font(.Brand.frauncesBlackItalic(size: 36))
                         .foregroundStyle(Color.ink)
                         .tracking(-1.4)
-                    Text("We use your location only to show pins around you and pin new sightings. Always private.")
+                    Text(String(localized: "We use your location only to show pins around you and pin new sightings. Always private."))
                         .font(.Brand.jakarta(.regular, size: 15))
                         .foregroundStyle(Color.stone)
                         .lineSpacing(3)
@@ -78,11 +78,11 @@ struct LocationPermissionStep: View {
 
                 VStack(spacing: 12) {
                     OnboardingDots(activeIndex: 2, count: 9)
-                    OnboardingPrimaryButton(title: "Enable location") {
+                    OnboardingPrimaryButton(title: String(localized: "Enable location")) {
                         locationManager.requestWhenInUseAuthorization()
                         onAdvance()
                     }
-                    OnboardingTextButton(title: "Maybe later", action: onAdvance)
+                    OnboardingTextButton(title: String(localized: "Maybe later"), action: onAdvance)
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 32)

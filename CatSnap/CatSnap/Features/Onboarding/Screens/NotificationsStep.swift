@@ -28,14 +28,14 @@ struct NotificationsStep: View {
                         .shadow(color: .black.opacity(0.18), radius: 3, x: 0, y: 2)
                 }
 
-                Text("get a buzz\nwhen cats\nshow up.")
+                Text(String(localized: "get a buzz\nwhen cats\nshow up."))
                     .font(.Brand.frauncesBlackItalic(size: 36))
                     .foregroundStyle(Color.ink)
                     .tracking(-1.4)
                     .multilineTextAlignment(.center)
                     .padding(.top, 32)
 
-                Text("Gentle pings when a regular returns to your area, or when someone spots a legend. No spam.")
+                Text(String(localized: "Gentle pings when a regular returns to your area, or when someone spots a legend. No spam."))
                     .font(.Brand.jakarta(.regular, size: 15))
                     .foregroundStyle(Color.stone)
                     .multilineTextAlignment(.center)
@@ -48,10 +48,10 @@ struct NotificationsStep: View {
                 HStack(spacing: 12) {
                     MapPin(size: 36, bgColor: .coral, catColor: Color(hex: 0xC97F3F))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Marmalade is back")
+                        Text(String(localized: "Marmalade is back"))
                             .font(.Brand.jakarta(.bold, size: 13))
                             .foregroundStyle(Color.ink)
-                        Text("Spotted on Brick Lane · 2 min ago")
+                        Text(String(localized: "Spotted on Brick Lane · 2 min ago"))
                             .font(.Brand.jakarta(.regular, size: 12))
                             .foregroundStyle(Color.stone)
                     }
@@ -69,7 +69,7 @@ struct NotificationsStep: View {
 
                 VStack(spacing: 12) {
                     OnboardingDots(activeIndex: 4, count: 9)
-                    OnboardingPrimaryButton(title: "Turn on notifications") {
+                    OnboardingPrimaryButton(title: String(localized: "Turn on notifications")) {
                         Task {
                             // Capture grant for future v2 push; ignore the result.
                             _ = try? await UNUserNotificationCenter.current()
@@ -77,7 +77,7 @@ struct NotificationsStep: View {
                         }
                         onAdvance()
                     }
-                    OnboardingTextButton(title: "Not now", action: onAdvance)
+                    OnboardingTextButton(title: String(localized: "Not now"), action: onAdvance)
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 32)

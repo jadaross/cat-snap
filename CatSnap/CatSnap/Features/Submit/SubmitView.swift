@@ -23,12 +23,12 @@ struct SubmitView: View {
                 }
                 content
             }
-            .navigationTitle(isOnCameraStage ? "" : "snap a sighting")
+            .navigationTitle(isOnCameraStage ? "" : String(localized: "snap a sighting"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(isOnCameraStage ? .hidden : .visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("cancel") { dismiss() }
+                    Button(String(localized: "cancel")) { dismiss() }
                         .font(.Brand.jakarta(.medium, size: 14))
                         .foregroundStyle(Color.stone)
                 }
@@ -218,7 +218,7 @@ struct SubmitView: View {
     private var locationCapturingView: some View {
         VStack(spacing: 16) {
             ProgressView().tint(Color.coral)
-            Text("getting your location…")
+            Text(String(localized: "getting your location…"))
                 .font(.Brand.jakarta(.medium, size: 14))
                 .foregroundStyle(Color.stone)
         }
@@ -232,7 +232,7 @@ struct SubmitView: View {
             // editing stage so the styling matches `CatSnap App.html` line 735.
             HStack {
                 Spacer()
-                Text("NEW SIGHTING")
+                Text(String(localized: "NEW SIGHTING"))
                     .font(.Brand.mono(size: 11))
                     .tracking(1.4)
                     .foregroundStyle(Color.stone)
@@ -341,7 +341,7 @@ struct SubmitView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "location.fill")
                                 .font(.system(size: 11, weight: .semibold))
-                            Text("use my location")
+                            Text(String(localized: "use my location"))
                                 .font(.Brand.jakarta(.bold, size: 12))
                         }
                         .foregroundStyle(Color.coral)
@@ -357,7 +357,7 @@ struct SubmitView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "photo.fill")
                                     .font(.system(size: 11, weight: .semibold))
-                                Text("use photo location")
+                                Text(String(localized: "use photo location"))
                                     .font(.Brand.jakarta(.bold, size: 12))
                             }
                             .foregroundStyle(Color.ink)
@@ -376,7 +376,7 @@ struct SubmitView: View {
     }
 
     private var nameField: some View {
-        TextField("Marmalade, Biscuit…", text: $model.catName)
+        TextField(String(localized: "Marmalade, Biscuit…"), text: $model.catName)
             .font(.Brand.jakarta(.bold, size: 16))
             .foregroundStyle(Color.ink)
             .padding(.horizontal, 14)
@@ -425,12 +425,13 @@ struct SubmitView: View {
     }
 
     private var submitButtonLabel: String {
-        if model.stage == .submitting { return "submitting…" }
+        if model.stage == .submitting { return String(localized: "submitting…") }
         let trimmed = model.catName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
+            // TODO: Use format string for v2: String(localized: "Pin %@ on the map  →", arguments: [trimmed])
             return "Pin \(trimmed) on the map  →"
         }
-        return "Pin on the map  →"
+        return String(localized: "Pin on the map  →")
     }
 
     // MARK: - Success
@@ -444,7 +445,7 @@ struct SubmitView: View {
                 spottedHero
                     .padding(.bottom, 20)
 
-                Text("+1 SIGHTING")
+                Text(String(localized: "+1 SIGHTING"))
                     .font(.Brand.mono(size: 11))
                     .tracking(1.6)
                     .foregroundStyle(Color.coral)
@@ -464,7 +465,7 @@ struct SubmitView: View {
 
             VStack(spacing: 10) {
                 Button { dismiss() } label: {
-                    Text("See on the map")
+                    Text(String(localized: "See on the map"))
                         .font(.Brand.jakarta(.bold, size: 16))
                         .foregroundStyle(Color.creamSoft)
                         .frame(maxWidth: .infinity)
