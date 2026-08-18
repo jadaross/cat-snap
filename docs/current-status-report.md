@@ -98,10 +98,19 @@ Business tab; EU availability depends on it clearing.
 
 ## Non-blocking, but worth doing
 
-- **Screenshots.** App Store Connect now requires **6.9"** iPhone (1320×2868 or
-  1290×2796 — iPhone 17 Pro Max), not the 6.7"/6.1" pair named in
-  `launch-checklist.md` §7 C15. Needs real seeded data to look good — an empty
-  map makes a poor screenshot.
+- **Screenshots.** Correcting an earlier note in this file: the live App Store
+  Connect form for this record asks for **iPhone 6.5"** —
+  1284 × 2778 or 1242 × 2688. Apple states these are reused for *all* display
+  sizes, so one set is enough; the 6.7"/6.1" pair in `launch-checklist.md`
+  §7 C15 and the "6.9" required" note I wrote earlier are both wrong.
+  Up to 10 allowed, first 3 appear on the install sheet. Needs real seeded
+  data — an empty map makes a poor screenshot.
+
+- **Demo account for App Review — easy rejection if missed.** Every screen in
+  CatSnap is behind the auth gate, and the version page has "Sign-in required"
+  ticked. Apple must be given a working username and password under
+  App Review Information or the review cannot proceed. Create a throwaway
+  account seeded with a few sightings so the reviewer sees a populated app.
 - **SMTP.** Email confirmation is on but no provider is wired. Default Supabase
   SMTP is rate-limited and lands in spam. Resend or Postmark.
 - **Sentry dSYM upload failed.** The build uploaded, but symbol upload warned:
