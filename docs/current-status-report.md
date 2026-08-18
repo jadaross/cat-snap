@@ -94,6 +94,20 @@ Declared and recorded against the 27 EU territories. Status is **In Review** —
 Apple verifies the declaration, so it is not instant. Check back on the
 Business tab; EU availability depends on it clearing.
 
+### 8. TestFlight internal testing — ✅ SET UP 18 Aug 2026
+
+Build 1.0 (1) finished processing: **Ready to Submit**. No export-compliance
+prompt appeared, confirming the `ITSAppUsesNonExemptEncryption` key works.
+
+Group "Internal Testers" created with automatic distribution ON (that setting
+cannot be changed later, so future uploads reach the group without action).
+`jada-ross@hotmail.com` added; the group's Builds tab shows 1.0 (1)
+**Ready to Test**.
+
+Note: the per-tester STATUS column still reads "No Builds Available" while the
+group-level view says Ready to Test. The two disagree; the tester column is
+known to lag. The authoritative check is opening TestFlight on the device.
+
 ---
 
 ## Non-blocking, but worth doing
