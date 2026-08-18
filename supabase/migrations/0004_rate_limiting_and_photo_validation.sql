@@ -21,18 +21,27 @@ create index if not exists sightings_user_created_at_idx
 
 -- Create a check constraint that prevents users from exceeding 50 sightings/day
 -- This is enforced at the database level, not just client-side
-alter table public.sightings
-  add constraint if not exists sightings_daily_limit_check
-  check (
-    -- Allow the row if it's the first sighting for this user today
-    -- or if the user has fewer than 50 sightings today (excluding this row)
-    (
-      select count(*)
-      from public.sightings s2
-      where s2.user_id = public.sightings.user_id
-        and s2.created_at >= current_date
-    ) < 50
-  );
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint 
+    where conname = 'sightings_daily_limit_check' 
+    and conrelid = 'public.sightings'::regclass
+  ) then
+    alter table public.sightings
+      add constraint sightings_daily_limit_check
+      check (
+        -- Allow the row if it's the first sighting for this user today
+        -- or if the user has fewer than 50 sightings today (excluding this row)
+        (
+          select count(*)
+          from public.sightings s2
+          where s2.user_id = public.sightings.user_id
+            and s2.created_at >= current_date
+        ) < 50
+      );
+  end if;
+end $$;
 
 -- ------------------------------------------------------------
 -- 2. Follows rate limit: 1000 follows per user total
@@ -60,16 +69,25 @@ create policy if not exists "Users can delete their own follows" on public.follo
 
 -- Add a check constraint to limit total follows per user to 1000
 -- This prevents a user from following more than 1000 other users
-alter table public.follows
-  add constraint if not exists follows_total_limit_check
-  check (
-    -- Allow the row if the follower has fewer than 1000 follows (excluding this row)
-    (
-      select count(*)
-      from public.follows f2
-      where f2.follower_id = public.follows.follower_id
-    ) < 1000
-  );
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint 
+    where conname = 'follows_total_limit_check' 
+    and conrelid = 'public.follows'::regclass
+  ) then
+    alter table public.follows
+      add constraint follows_total_limit_check
+      check (
+        -- Allow the row if the follower has fewer than 1000 follows (excluding this row)
+        (
+          select count(*)
+          from public.follows f2
+          where f2.follower_id = public.follows.follower_id
+        ) < 1000
+      );
+  end if;
+end $$;
 
 -- ------------------------------------------------------------
 -- 3. Server-side photo size enforcement
