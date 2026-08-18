@@ -12,10 +12,10 @@ struct SettingsSheet: View {
     @State private var showDeleteConfirm = false
     @State private var deleteError: String?
 
-    // TODO: replace with real values before App Store submission.
+    // Privacy policy and terms hosted on GitHub Pages
     private let supportEmail = "support@catsnap.app"
-    private let privacyURL = URL(string: "https://catsnap.app/privacy")!
-    private let termsURL   = URL(string: "https://catsnap.app/terms")!
+    private let privacyURL = URL(string: "https://jadaross.github.io/cat-snap/privacy-policy.html")!
+    private let termsURL   = URL(string: "https://jadaross.github.io/cat-snap/terms-of-service.html")!
 
     var body: some View {
         NavigationStack {
