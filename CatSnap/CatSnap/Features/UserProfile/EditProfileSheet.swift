@@ -113,7 +113,7 @@ struct EditProfileSheet: View {
             try await onSave(.init(displayName: displayName, avatar: pickedAvatar))
             dismiss()
         } catch {
-            self.error = error.localizedDescription
+            self.error = AppError.map(error).localizedDescription
         }
     }
 }

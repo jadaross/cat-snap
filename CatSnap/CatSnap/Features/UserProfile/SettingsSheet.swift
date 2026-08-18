@@ -14,8 +14,14 @@ struct SettingsSheet: View {
 
     // Privacy policy and terms hosted on GitHub Pages
     private let supportEmail = "support@catsnap.app"
-    private let privacyURL = URL(string: "https://jadaross.github.io/cat-snap/privacy-policy.html")!
-    private let termsURL   = URL(string: "https://jadaross.github.io/cat-snap/terms-of-service.html")!
+    private var privacyURL: URL {
+        URL(string: "https://jadaross.github.io/cat-snap/privacy-policy.html") 
+            ?? URL(string: "https://catsnap.app/privacy")!
+    }
+    private var termsURL: URL {
+        URL(string: "https://jadaross.github.io/cat-snap/terms-of-service.html") 
+            ?? URL(string: "https://catsnap.app/terms")!
+    }
 
     var body: some View {
         NavigationStack {
@@ -159,7 +165,7 @@ struct SettingsSheet: View {
             // AuthSession's authStateChanges listener routes the app back
             // to AuthView automatically; the sheet closes with it.
         } catch {
-            deleteError = error.localizedDescription
+            deleteError = AppError.map(error).localizedDescription
         }
     }
 }

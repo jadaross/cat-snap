@@ -124,7 +124,7 @@ struct AuthView: View {
                     info = "check your email to confirm, then sign in."
                 }
             } catch {
-                self.error = error.localizedDescription
+                self.error = AppError.map(error).localizedDescription
             }
         }
     }
@@ -138,7 +138,7 @@ struct AuthView: View {
             do {
                 _ = try await apple.complete(result)
             } catch {
-                self.error = error.localizedDescription
+                self.error = AppError.map(error).localizedDescription
             }
         }
     }

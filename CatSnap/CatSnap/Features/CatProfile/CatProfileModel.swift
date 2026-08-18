@@ -54,7 +54,7 @@ final class CatProfileModel {
             isFavorite = !favorites.isEmpty
             state = .loaded(cat, loadedSightings)
         } catch {
-            state = .failed(error.localizedDescription)
+            state = .failed(AppError.map(error).localizedDescription)
         }
     }
 

@@ -158,10 +158,11 @@ struct SpotConfirmSheet: View {
     private func scheduleReverseGeocode() {
         reverseGeocodeTask?.cancel()
         let target = coordinate
-        reverseGeocodeTask = Task {
+        reverseGeocodeTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 350_000_000)
             if Task.isCancelled { return }
-            let label = await locationManager.reverseGeocode(
+            guard let self else { return }
+            let label = await self.locationManager.reverseGeocode(
                 CLLocation(latitude: target.latitude, longitude: target.longitude)
             )
             if Task.isCancelled { return }
@@ -189,7 +190,7 @@ struct SpotConfirmSheet: View {
             onConfirmed()
             dismiss()
         } catch {
-            stage = .error(error.localizedDescription)
+            stage = .error(AppError.map(error).localizedDescription)
             errorMessage = "couldn't log spot — please try again."
         }
     }

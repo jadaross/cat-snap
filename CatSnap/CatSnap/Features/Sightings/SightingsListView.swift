@@ -27,7 +27,7 @@ final class SightingsListModel {
             )
             state = .loaded(response)
         } catch {
-            state = .failed(error.localizedDescription)
+            state = .failed(AppError.map(error).localizedDescription)
         }
     }
 }

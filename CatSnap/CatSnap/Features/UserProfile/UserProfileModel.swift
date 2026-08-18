@@ -46,7 +46,7 @@ final class UserProfileModel {
             }
             state = .loaded(profile, sightings, catCount: catResp.count ?? 0)
         } catch {
-            state = .failed(error.localizedDescription)
+            state = .failed(AppError.map(error).localizedDescription)
         }
     }
 

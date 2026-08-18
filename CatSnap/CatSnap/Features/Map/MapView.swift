@@ -45,7 +45,7 @@ final class MapModel {
             )
             error = nil
         } catch {
-            self.error = error.localizedDescription
+            self.error = AppError.map(error).localizedDescription
         }
     }
 }

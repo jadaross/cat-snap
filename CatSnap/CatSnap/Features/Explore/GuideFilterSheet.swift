@@ -85,7 +85,7 @@ struct GuideFilterSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             sectionLabel("RARITY")
             FlowingChips(items: Cat.Rarity.allCases.map { $0.rawValue }) { rawValue in
-                let r = Cat.Rarity(rawValue: rawValue)!
+                guard let r = Cat.Rarity(rawValue: rawValue) else { return AnyView(EmptyView()) }
                 let active = (draft.rarities ?? []).contains(r)
                 return AnyView(
                     chip(rawValue, isActive: active) {

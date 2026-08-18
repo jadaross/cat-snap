@@ -56,7 +56,7 @@ final class GuideModel {
             rows = response
             error = nil
         } catch {
-            self.error = error.localizedDescription
+            self.error = AppError.map(error).localizedDescription
         }
     }
 

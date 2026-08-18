@@ -104,11 +104,13 @@ struct UserProfileView: View {
         }
         .sheet(isPresented: $isEditPresented) {
             EditProfileSheet(profile: profile) { update in
-                if let avatar = update.avatar {
-                    try await model.uploadAvatar(avatar)
-                }
-                if (profile.displayName ?? "") != update.displayName {
-                    try await model.updateDisplayName(update.displayName)
+                Task {
+                    if let avatar = update.avatar {
+                        try await model.uploadAvatar(avatar)
+                    }
+                    if (profile.displayName ?? "") != update.displayName {
+                        try await model.updateDisplayName(update.displayName)
+                    }
                 }
             }
         }

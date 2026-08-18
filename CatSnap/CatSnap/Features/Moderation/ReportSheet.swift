@@ -191,7 +191,7 @@ struct ReportSheet: View {
             onSubmitted?()
             dismiss()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppError.map(error).localizedDescription
         }
     }
 }

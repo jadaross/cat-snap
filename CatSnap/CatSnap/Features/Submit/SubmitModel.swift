@@ -76,7 +76,7 @@ final class SubmitModel {
             locationLabel = await locationManager.reverseGeocode(loc)
             stage = .editing
         } catch {
-            stage = .error(error.localizedDescription)
+            stage = .error(AppError.map(error).localizedDescription)
         }
     }
 
@@ -148,7 +148,7 @@ final class SubmitModel {
             stage = .done
             NotificationCenter.default.post(name: .sightingSubmitted, object: nil)
         } catch {
-            stage = .error(error.localizedDescription)
+            stage = .error(AppError.map(error).localizedDescription)
         }
     }
 }

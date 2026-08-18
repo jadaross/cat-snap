@@ -134,7 +134,7 @@ struct AddFriendsView: View {
                 results = try await FriendsGraph.search(query: trimmed)
                 error = nil
             } catch {
-                self.error = error.localizedDescription
+                self.error = AppError.map(error).localizedDescription
             }
             isSearching = false
         }
@@ -145,7 +145,7 @@ struct AddFriendsView: View {
             try await FriendsGraph.follow(userId: profile.userId)
             updateRow(profile.userId, isFollowing: true)
         } catch {
-            self.error = error.localizedDescription
+            self.error = AppError.map(error).localizedDescription
         }
     }
 
@@ -154,7 +154,7 @@ struct AddFriendsView: View {
             try await FriendsGraph.unfollow(userId: profile.userId)
             updateRow(profile.userId, isFollowing: false)
         } catch {
-            self.error = error.localizedDescription
+            self.error = AppError.map(error).localizedDescription
         }
     }
 

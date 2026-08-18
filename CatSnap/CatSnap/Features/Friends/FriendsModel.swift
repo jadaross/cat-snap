@@ -20,7 +20,7 @@ final class FriendsModel {
             friends = try await FriendsGraph.myFriends()
             error = nil
         } catch {
-            self.error = error.localizedDescription
+            self.error = AppError.map(error).localizedDescription
         }
     }
 
@@ -31,7 +31,7 @@ final class FriendsModel {
             activity = try await FriendsGraph.friendActivity(limit: limit)
             error = nil
         } catch {
-            self.error = error.localizedDescription
+            self.error = AppError.map(error).localizedDescription
         }
     }
 
