@@ -1,179 +1,121 @@
-# Cat-Snap App Store Launch - Current Status Report
+# Cat-Snap — Remaining Steps to App Store
 
-**Date**: August 18, 2026  
-**Status**: Ready for TestFlight (4 final configuration items remaining)
+**Verified**: 18 August 2026, by building and running the app and inspecting the live Apple accounts.
 
----
-
-## ✅ Completed This Session
-
-### Code Quality & Security
-- ✅ **Swift Best Practices**: Audit completed, all high-priority issues fixed
-- ✅ **Security Audit**: Snyk scans passed (0 issues), manual review A- rating
-- ✅ **Error Handling**: User-friendly error mapping implemented (AppError.swift)
-- ✅ **Concurrency**: Fixed syntax errors, force unwraps, added weak self patterns
-- ✅ **Production Features**: Sentry crash reporting integrated, rate limiting triggers, localization scaffolding
-
-### App Store Gates
-- ✅ **Privacy Policy**: Hosted on GitHub Pages (https://jadaross.github.io/cat-snap/privacy-policy.html)
-- ✅ **Terms of Service**: Hosted on GitHub Pages (https://jadaross.github.io/cat-snap/terms-of-service.html)
-- ✅ **Account Deletion**: Implemented with edge function
-- ✅ **Block/Report**: UGC moderation features implemented
-- ✅ **Settings URLs**: Updated with real GitHub Pages URLs
-
-### Database & Backend
-- ✅ **Rate Limiting**: Trigger-based constraints (50 sightings/day, 1000 follows) - migration applied
-- ✅ **Photo Validation**: Server-side 10MB limit enforcement functions
-- ✅ **Apple Sign In**: Provider configured in Supabase Dashboard
-- ✅ **Email Confirmation**: Enabled in Supabase Dashboard
-- ✅ **Leaked Password Protection**: Enabled in Supabase Dashboard
-- ✅ **RLS Policies**: All tables properly secured
-- ✅ **RPC Security**: SECURITY DEFINER with search_path protection
-
-### Xcode Project Configuration
-- ✅ **Bundle ID**: `com.jadaross.CatSnap` (already configured)
-- ✅ **Development Team**: DFFRB59G23 (already configured)
-- ✅ **Code Signing**: Automatic signing enabled
-- ✅ **Entitlements**: `CatSnap/CatSnap.entitlements` exists with Sign in with Apple
-- ✅ **Deployment Target**: iOS 17.6 (exceeds iOS 17.0+ requirement)
-- ✅ **Sign in with Apple**: Capability already added to Xcode project
-- ✅ **App Icon**: Added AppIcon-creamsoft-1024.png to asset catalog
-
-### Documentation
-- ✅ **Apple Developer Setup Guide**: Created comprehensive instructions
-- ✅ **App Icon Specifications**: Detailed creation guide
-- ✅ **Security Audit Report**: Complete security assessment
-- ✅ **Swift Audit Report**: Code quality assessment
-- ✅ **Brand Exports**: App icon and design assets exported
+The previous version of this file claimed "95% ready for TestFlight". That was
+never verified against a build. **The tree did not compile.** Corrected below.
 
 ---
 
-## ⏳ Remaining Action Items (4 Items)
+## Verified working
 
-### 1. Sentry DSN Configuration 🔧 (MEDIUM PRIORITY)
-**Status**: Code integrated, but DSN not configured
+| Item | Evidence |
+|---|---|
+| App compiles and runs | Debug build succeeds, launches on iPhone 17 Pro simulator, onboarding renders |
+| Bundle ID registered | `com.jadaross.CatSnap`, team `DFFRB59G23`, portal confirmed |
+| Sign in with Apple | Enabled on the App ID, "Enable as a primary App ID" — portal confirmed |
+| Privacy policy live | https://jadaross.github.io/cat-snap/privacy-policy.html → 200 |
+| Terms live | https://jadaross.github.io/cat-snap/terms-of-service.html → 200 |
+| App icon | 1024×1024 present in the asset catalog |
+| Support domain | `catsnap.app` resolves, MX (Namecheap forwarding) configured |
+| Account deletion, block/report | Shipped — see launch-checklist.md §5 A1/A2 |
 
-**What to do**:
-1. Go to https://sentry.io → Your Cat-Snap iOS project → Settings → Client Keys (DSN)
-2. Copy your DSN (Data Source Name)
-3. Add to `CatSnap/CatSnap/CatSnap.xcconfig`:
-```bash
-SENTRY_DSN=https://your-dsn@sentry.io/project-id
-```
-4. The app will gracefully handle missing DSN (skips initialization)
+## Fixed in commit `b49d493`
 
-### 2. SMTP Configuration 🔧 (MEDIUM PRIORITY)
-**Status**: Email confirmation enabled, but SMTP provider not configured
+- `CatSnapApp.swift` — `options.sessionTracking` is not a member of sentry-cocoa
+  8.x `Options`. Correct name is `enableAutoSessionTracking`. Hard compile error.
+- `SpotConfirmSheet.swift` — `[weak self]` inside a SwiftUI `View` struct.
+  `weak` requires a class type. Hard compile error.
+- `TARGETED_DEVICE_FAMILY` `1,2` → `1`. iPad is deferred to v2 but the project
+  advertised support, which puts the app in front of reviewers on iPad and
+  requires a separate iPad screenshot set.
+- iPhone orientations narrowed to portrait only.
+- `Info.plist` — added `ITSAppUsesNonExemptEncryption = false`, so the export
+  compliance prompt does not block every TestFlight upload.
 
-**What to do**:
-1. Go to: https://supabase.com/dashboard/project/wgtjtvxpxalyeukgxbpo/auth/smtp-settings
-2. Choose SMTP provider (Resend recommended for free tier)
-3. Configure SMTP settings (host, port, user, password, sender email)
-4. Avoid default Supabase SMTP (rate-limited, goes to spam)
+## Fixed on `gh-pages` (commit `4953b35`)
 
-### 3. Apple Developer Console 🍎 (HIGH PRIORITY)
-**Status**: Bundle ID exists, but needs verification
-
-**What to do**:
-1. Go to https://developer.apple.com/account
-2. Navigate to Identifiers → Bundle IDs
-3. Find `com.jadaross.CatSnap`
-4. Ensure **Sign in with Apple** is enabled as a Primary App ID
-5. Create App Store Connect record (if not done):
-   - Go to https://appstoreconnect.apple.com
-   - My Apps → + → New App
-   - Platform: iOS, Name: Cat-Snap, Bundle ID: com.jadaross.CatSnap
-   - Primary Language: English, SKU: CATSNAP001
-
-### 4. App Signing Verification 🔐 (LOW PRIORITY)
-**Status**: Automatic signing configured, needs verification
-
-**What to do**:
-1. Open Xcode → CatSnap target → Signing & Capabilities
-2. Verify Team DFFRB59G23 is selected
-3. Check that provisioning profiles are valid
-4. Resolve any "Failed to create provisioning profile" errors if present
+The app links to `/cat-snap/privacy-policy.html`, but the files only existed
+under `/docs/`. **Both in-app links were 404ing.** Copied to the publishing root.
 
 ---
 
-## 🚀 Ready to Build
+## Blockers — must be done by hand
 
-Once you complete the 4 remaining items, you can:
+### 1. Accept the App Store Connect Terms of Service — HARD BLOCKER
 
-### Build for Testing
-```bash
-# Simulator
-xcodebuild -project CatSnap/CatSnap.xcodeproj -scheme CatSnap \
-  -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17' build
+https://appstoreconnect.apple.com is showing a full-page Terms of Service
+modal. Nothing can proceed until it is accepted: no app record, no build
+upload, no TestFlight. This is a legal agreement and must be accepted by you.
 
-# Device (requires provisioning)
-xcodebuild -project CatSnap/CatSnap.xcodeproj -scheme CatSnap \
-  -sdk iphoneos -configuration Release archive
-```
+### 2. Install Xcode's iOS platform — DONE, but note the cause
 
-### Upload to TestFlight
-1. In Xcode: Product → Archive
-2. Wait for archive to complete
-3. Organizer window opens → Distribute App → App Store Connect
-4. Follow the upload process
-5. Build appears in TestFlight → iOS
+Xcode 26.6 ships the iOS 26.5 SDK; only the 26.4 simulator runtime was
+installed, so `xcodebuild` reported **zero eligible destinations** and no build
+of any kind could run. Resolved by `xcodebuild -downloadPlatform iOS` (8.5 GB).
+Re-check after any Xcode update.
 
----
+### 3. Register a device
 
-## 📊 Overall Readiness: 95%
+The team has **zero registered devices**, so Xcode cannot mint a development
+provisioning profile — archiving fails with "Your team has no devices". Plug
+your iPhone in and let Xcode register it. Required before you can run on
+hardware; also the smoothest path to a first archive.
 
-**Completed**: 19/23 major items (95%)  
-**Remaining**: 4 configuration items (30-60 minutes)
+### 4. Create the distribution certificate
 
-**Estimated Time to TestFlight**: 30-60 minutes
+Only an **Apple Development** certificate exists. App Store distribution needs
+an **Apple Distribution** certificate. Xcode creates one automatically during
+Product → Archive → Distribute App, provided the account has Account Holder or
+Admin rights. No manual step expected, but it has not happened yet.
 
----
+### 5. Archive from the Xcode GUI
 
-## 🎯 Quick Start Checklist
+Automatic signing cannot be overridden from the command line, so the archive
+must go through Xcode: **Product → Archive → Distribute App → App Store Connect**.
+CLI archiving would require switching the project to manual signing.
 
-1. **Right Now** (15 min):
-   - [ ] Add Sentry DSN to `CatSnap.xcconfig`
-   - [ ] Configure SMTP provider in Supabase Dashboard
+### 6. Create the App Store Connect record
 
-2. **Before TestFlight** (30-45 min):
-   - [ ] Verify Apple Developer Console Bundle ID configuration
-   - [ ] Create App Store Connect record
-   - [ ] Verify app signing in Xcode
-
-3. **Final Verification** (15 min):
-   - [ ] Build and test on device
-   - [ ] Upload to TestFlight
+Blocked on step 1. Then: My Apps → + → New App. Platform iOS, name Cat-Snap,
+bundle ID `com.jadaross.CatSnap`, SKU `CATSNAP001`, primary language English.
 
 ---
 
-## 📱 After TestFlight
+## Non-blocking, but worth doing
 
-Once TestFlight is working:
-1. **App Store Connect metadata**:
-   - Write description (4000 chars)
-   - Add keywords (100 chars)
-   - Prepare screenshots (6.7" and 6.1" iPhone)
-   - Configure privacy nutrition labels
-   - Add support URL
-
-2. **Submit for Review**:
-   - Complete all required fields
-   - Submit for App Store review
-   - Wait for Apple review (typically 1-3 days)
-
----
-
-## 📝 Commits This Session
-
-- Add Privacy Policy and Terms of Service for App Store submission
-- Update SettingsSheet with real privacy policy and terms URLs
-- Add Apple Developer setup and app icon creation guides
-- Add comprehensive security audit report
-- Fix critical Swift best practices issues
-- Add production readiness features (Sentry, rate limiting, localization)
-- Fix SQL syntax errors in rate limiting migration
-- Add app icon PNG with cream soft background
+- **Screenshots.** App Store Connect now requires **6.9"** iPhone (1320×2868 or
+  1290×2796 — iPhone 17 Pro Max), not the 6.7"/6.1" pair named in
+  `launch-checklist.md` §7 C15. Needs real seeded data to look good — an empty
+  map makes a poor screenshot.
+- **SMTP.** Email confirmation is on but no provider is wired. Default Supabase
+  SMTP is rate-limited and lands in spam. Resend or Postmark.
+- **Sentry DSN.** `SENTRY_DSN` is absent from `CatSnap.xcconfig`. The app skips
+  Sentry init gracefully, so TestFlight would fly blind on crashes.
+- **Localization is inert.** 36 `String(localized:)` call sites but no string
+  catalog exists, so nothing is actually localizable. Fine for an en-only v1 —
+  the scaffolding is there — but it does not do anything yet.
+- **Confirm `support@catsnap.app` delivers.** It appears in the app, the privacy
+  policy, and the terms. The domain has email forwarding configured; send a
+  test to be sure it reaches you.
+- **App icon appearance variants.** The same full-colour PNG is used for the
+  universal, dark, and tinted slots. Legal, but the tinted variant will look
+  poor. Supply a proper grayscale tinted version, or drop those two slots.
+- **Notification permission with no notifications.** Onboarding requests
+  notification authorization but there is no APNs handler and nothing ever
+  sends one. Reviewers occasionally flag this. Consider dropping the step.
 
 ---
 
-The codebase is in excellent shape. Just 4 configuration items remain before TestFlight!
+## Order to do things in
+
+1. Accept the App Store Connect ToS.
+2. Plug in your iPhone so it gets registered.
+3. Xcode → Product → Archive. Let it create the distribution certificate.
+4. Create the App Store Connect record.
+5. Distribute App → App Store Connect → upload.
+6. Wire SMTP + Sentry DSN while the build processes.
+7. Internal TestFlight, daily-drive it, seed real data.
+8. Capture 6.9" screenshots from the seeded app.
+9. Fill in description, keywords, privacy nutrition labels, support URL.
+10. Submit.
