@@ -4,7 +4,7 @@
 
 ## Introduction
 
-Cat-Snap ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use the Cat-Snap iOS application.
+CatSnap ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use the CatSnap iOS application.
 
 ## Information We Collect
 
@@ -33,7 +33,7 @@ Cat-Snap ("we", "our", or "us") is committed to protecting your privacy. This Pr
 ## How We Use Your Information
 
 We use your information to:
-- Provide and maintain the Cat-Snap service
+- Provide and maintain the CatSnap service
 - Process and display cat sightings on the map
 - Enable social features like following friends and seeing their activity
 - Authenticate users and secure accounts
@@ -72,7 +72,7 @@ You have the right to:
 
 ## Children's Privacy
 
-Cat-Snap is not intended for children under 13. We do not knowingly collect personal information from children under 13.
+CatSnap is not intended for children under 13. We do not knowingly collect personal information from children under 13.
 
 ## Changes to This Policy
 

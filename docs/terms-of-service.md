@@ -4,11 +4,11 @@
 
 ## Agreement to Terms
 
-By downloading, installing, or using the Cat-Snap iOS application ("the App"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, please do not use the App.
+By downloading, installing, or using the CatSnap iOS application ("the App"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, please do not use the App.
 
 ## Description of Service
 
-Cat-Snap is a community-driven mobile application that allows users to:
+CatSnap is a community-driven mobile application that allows users to:
 - Spot and track street cats in their neighborhood
 - Submit cat sightings with photos and location data
 - Build cat profiles and sighting histories
@@ -33,7 +33,7 @@ You agree to use the App only for lawful purposes and in accordance with these T
 - Use the App for any commercial purpose without our permission
 
 ### Content Guidelines
-When submitting content to Cat-Snap, you agree that:
+When submitting content to CatSnap, you agree that:
 - You own or have permission to use any photos you upload
 - Your content does not infringe on the rights of others
 - Your content is appropriate for a general audience
@@ -46,7 +46,7 @@ Your use of the App is also governed by our Privacy Policy, which can be found a
 ## Intellectual Property
 
 ### Our Rights
-The App, its design, and all content (excluding user-generated content) are owned by Cat-Snap and are protected by intellectual property laws.
+The App, its design, and all content (excluding user-generated content) are owned by CatSnap and are protected by intellectual property laws.
 
 ### Your Rights
 You retain ownership of any content you submit to the App. By submitting content, you grant us a worldwide, non-exclusive, royalty-free license to use, display, and distribute your content within the App and for promotional purposes.
@@ -64,7 +64,7 @@ The App is provided "as is" and "as available" without warranties of any kind, e
 
 ## Limitation of Liability
 
-To the fullest extent permitted by law, Cat-Snap shall not be liable for:
+To the fullest extent permitted by law, CatSnap shall not be liable for:
 - Any indirect, incidental, special, or consequential damages
 - Loss of data, profits, or business opportunities
 - Any damages arising from your use or inability to use the App
@@ -127,7 +127,7 @@ For questions about these Terms of Service, please contact us at:
 - Email: support@catsnap.app
 - In-app: Settings → Contact support
 
-## Specific Provisions for Cat-Snap
+## Specific Provisions for CatSnap
 
 ### Cat Data Accuracy
 Cat sighting data is user-generated and may not always be accurate. Users should verify cat information independently before making decisions based on sighting data.
@@ -139,11 +139,11 @@ When submitting sightings, be mindful of:
 - Respecting the privacy of property owners
 
 ### Community Moderation
-Cat-Snap relies on community moderation. Users are encouraged to:
+CatSnap relies on community moderation. Users are encouraged to:
 - Report inaccurate or inappropriate content
 - Help maintain accurate cat profiles
 - Foster a respectful and helpful community
 
 ---
 
-*By using Cat-Snap, you agree to help build a positive community for cat lovers while respecting the privacy and welfare of both people and cats.*
+*By using CatSnap, you agree to help build a positive community for cat lovers while respecting the privacy and welfare of both people and cats.*

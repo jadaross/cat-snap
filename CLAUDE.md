@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Cat-Snap is a native SwiftUI iOS app (iOS 17+) for spotting and tracking street cats. The repo also holds the design spec, brand reference, and database schema. Backend is Supabase (Postgres + PostGIS + Auth + Storage) — project ID `wgtjtvxpxalyeukgxbpo` in eu-central-2 (Zurich).
+CatSnap is a native SwiftUI iOS app (iOS 17+) for spotting and tracking street cats. The repo also holds the design spec, brand reference, and database schema. Backend is Supabase (Postgres + PostGIS + Auth + Storage) — project ID `wgtjtvxpxalyeukgxbpo` in eu-central-2 (Zurich).
 
 The previous Next.js web app was retired and lives at git tag `v1.0.2-web-final`. The iOS rebuild started fresh — new Supabase project, new schema, new branding.
 

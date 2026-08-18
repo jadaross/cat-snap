@@ -242,7 +242,7 @@ Stuff that bites if skipped — not a rejection risk, but the difference between
 
 Do once, in parallel with sections 5–6.
 
-- [ ] **C13. App Store Connect record.** Bundle id `com.jadaross.CatSnap`, name "Cat-Snap", subtitle "spot every cat.", primary category Photo & Video (secondary Social Networking), age rating 4+ (UGC + location disclosures answered honestly).
+- [ ] **C13. App Store Connect record.** Bundle id `com.jadaross.CatSnap`, name "CatSnap", subtitle "spot every cat.", primary category Photo & Video (secondary Social Networking), age rating 4+ (UGC + location disclosures answered honestly).
 - [ ] **C14. Description + keywords.** 4000-char description, 100-char keyword list. Draft alongside this checklist if iterating.
 - [ ] **C15. Screenshots.** 6.7" iPhone Pro Max + 6.1" iPhone (required). 5–8 screenshots each. Real fixtures (real cats, real map). Marketing-text overlay on each.
 - [ ] **C16. Preview video** (optional but converts better). 15–30s. `xcrun simctl io booted recordVideo`.

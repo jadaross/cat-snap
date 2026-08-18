@@ -1,12 +1,12 @@
 # Brand
 
-Single source of truth for Cat-Snap's visual identity. Extracted from the design system at `~/Downloads/cat-snap-branding-and-design/CatSnap Brand System.html`. The full design folder stays in Downloads — see `docs/design-reference.md` for what's there.
+Single source of truth for CatSnap's visual identity. Extracted from the design system at `~/Downloads/cat-snap-branding-and-design/CatSnap Brand System.html`. The full design folder stays in Downloads — see `docs/design-reference.md` for what's there.
 
 ## Identity
 
 | Field | Value |
 |-------|-------|
-| App name | **Cat-Snap** (display: lowercase italic, "cat" + coral "snap") |
+| App name | **CatSnap** (display: lowercase italic, "cat" + coral "snap") |
 | Tagline | **"spot every cat."** |
 | Bundle identifier | `com.jadaross.catsnap` (lowercase, no hyphens) |
 | Voice | Warm, observational, narrative ("the cat at the window") — never overly cute |

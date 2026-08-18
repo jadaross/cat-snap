@@ -1,4 +1,4 @@
-# Cat-Snap
+# CatSnap
 
 > A community-driven map for spotting and tracking street cats. Native SwiftUI iOS app.
 
