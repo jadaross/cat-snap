@@ -19,7 +19,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
 
         var errorDescription: String? {
             switch self {
-            case .denied:      return "Location access is off. Enable it in Settings → Cat-Snap."
+            case .denied:      return "Location access is off. Enable it in Settings → CatSnap."
             case .unavailable: return "Couldn't get your location. Try again in a moment."
             }
         }

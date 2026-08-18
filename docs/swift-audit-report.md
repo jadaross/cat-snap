@@ -1,12 +1,12 @@
 # Swift Best Practices Audit Report
 
 **Date**: August 18, 2026  
-**Project**: Cat-Snap iOS App  
+**Project**: CatSnap iOS App  
 **Audit Type**: Swift Best Practices Sweep
 
 ## Executive Summary
 
-The Cat-Snap codebase demonstrates **strong overall Swift and SwiftUI practices** with modern iOS 17 patterns. The code is well-organized, uses `@Observable` correctly, and follows good architectural patterns. However, there are several areas for improvement across error handling, SwiftUI hygiene, and code cleanliness that should be addressed before launch.
+The CatSnap codebase demonstrates **strong overall Swift and SwiftUI practices** with modern iOS 17 patterns. The code is well-organized, uses `@Observable` correctly, and follows good architectural patterns. However, there are several areas for improvement across error handling, SwiftUI hygiene, and code cleanliness that should be addressed before launch.
 
 **Overall Assessment**: **B+** (Strong foundation with polish needed)
 
@@ -253,7 +253,7 @@ task = Task { [weak self] in
 
 ## Conclusion
 
-The Cat-Snap iOS codebase demonstrates **strong engineering practices** with modern Swift patterns. The code is well-organized, uses the latest iOS 17 features correctly, and follows good architectural principles.
+The CatSnap iOS codebase demonstrates **strong engineering practices** with modern Swift patterns. The code is well-organized, uses the latest iOS 17 features correctly, and follows good architectural principles.
 
 The primary areas for improvement are:
 1. **Error handling** - Replace technical error messages with user-friendly ones

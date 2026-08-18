@@ -1,7 +1,7 @@
 # Security Audit Report
 
 **Date**: August 18, 2026  
-**Project**: Cat-Snap iOS App  
+**Project**: CatSnap iOS App  
 **Audit Type**: Snyk Automated Scans + Manual Review
 
 ## Snyk Automated Scan Results
@@ -168,7 +168,7 @@
 - `pg_graphql_*_table_exposed` lint warnings present
 
 **Assessment**:
-- Cat-Snap doesn't use pg_graphql
+- CatSnap doesn't use pg_graphql
 - These are informational warnings from Supabase
 - No security impact
 
@@ -312,7 +312,7 @@
 
 ## Conclusion
 
-The Cat-Snap iOS app demonstrates **strong security practices** with no critical or high-severity issues. The automated Snyk scans passed cleanly, and the manual review shows thoughtful security architecture.
+The CatSnap iOS app demonstrates **strong security practices** with no critical or high-severity issues. The automated Snyk scans passed cleanly, and the manual review shows thoughtful security architecture.
 
 The main areas for improvement are operational (rate limiting, email confirmation) rather than fundamental security flaws. These should be addressed as part of the production readiness track.
 

@@ -127,7 +127,7 @@ struct ReportSheet: View {
     }
 
     private var intro: some View {
-        Text("we'll review \(target.subjectLabel) within 24 hours. thanks for keeping cat-snap kind.")
+        Text("we'll review \(target.subjectLabel) within 24 hours. thanks for keeping catsnap kind.")
             .font(.Brand.jakarta(.regular, size: 13))
             .foregroundStyle(Color.stone)
     }

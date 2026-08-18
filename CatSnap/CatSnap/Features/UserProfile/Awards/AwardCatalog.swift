@@ -17,7 +17,7 @@ enum AwardCatalog {
                 id: "first_snap",
                 emoji: "🏅",
                 label: "First Snap",
-                description: "Your very first sighting on Cat-Snap.",
+                description: "Your very first sighting on CatSnap.",
                 criteria: "Log your first sighting.",
                 rare: false,
                 earned: inputs.totalSightings >= 1

@@ -1,5 +1,5 @@
 -- ============================================================
--- Cat-Snap iOS Rebuild — Initial Schema (v1)
+-- CatSnap iOS Rebuild — Initial Schema (v1)
 -- Run this in the new Supabase project's SQL Editor.
 --
 -- Differences from legacy v1.0.2 schema (docs/legacy-schema.sql):

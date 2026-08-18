@@ -1,4 +1,4 @@
-# Cat-Snap — Remaining Steps to App Store
+# CatSnap — Remaining Steps to App Store
 
 **Verified**: 18 August 2026, by building and running the app and inspecting the live Apple accounts.
 

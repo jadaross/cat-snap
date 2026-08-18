@@ -1,6 +1,6 @@
 # Apple Developer Console Setup Instructions
 
-This guide walks you through configuring the Apple Developer Console for Cat-Snap App Store submission.
+This guide walks you through configuring the Apple Developer Console for CatSnap App Store submission.
 
 ## Prerequisites
 - Apple Developer Program membership ($99/year)
@@ -16,7 +16,7 @@ This guide walks you through configuring the Apple Developer Console for Cat-Sna
    - **Platform**: iOS, iPadOS
    - **Bundle ID**: `com.jadaross.CatSnap` (must match Xcode project)
    - **Type**: App ID
-   - **Description**: Cat-Snap
+   - **Description**: CatSnap
 5. Under **Capabilities**, scroll down and check **Sign in with Apple**
 6. Click **Continue**, then **Register**
 
@@ -58,7 +58,7 @@ This guide walks you through configuring the Apple Developer Console for Cat-Sna
 2. Navigate to **My Apps** → **+** → **New App**
 3. Fill in:
    - **Platform**: iOS
-   - **Name**: Cat-Snap
+   - **Name**: CatSnap
    - **Primary Language**: English
    - **Bundle ID**: com.jadaross.CatSnap (select from dropdown)
    - **SKU**: CATSNAP001 (or your preferred SKU)
@@ -66,10 +66,10 @@ This guide walks you through configuring the Apple Developer Console for Cat-Sna
 
 ## Step 6: Configure App Information
 
-In App Store Connect, for your new Cat-Snap app:
+In App Store Connect, for your new CatSnap app:
 
 ### Basic Information
-- **Name**: Cat-Snap
+- **Name**: CatSnap
 - **Subtitle**: spot every cat.
 - **Primary Category**: Photo & Video
 - **Secondary Category**: Social Networking
