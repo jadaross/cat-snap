@@ -61,11 +61,31 @@ create index if not exists follows_followee_id_idx on public.follows(followee_id
 
 alter table public.follows enable row level security;
 
-create policy if not exists "Users can insert their own follows" on public.follows
-  for insert with check ((select auth.uid()) = follower_id);
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies 
+    where policyname = 'Users can insert their own follows' 
+    and schemaname = 'public' 
+    and tablename = 'follows'
+  ) then
+    create policy "Users can insert their own follows" on public.follows
+      for insert with check ((select auth.uid()) = follower_id);
+  end if;
+end $$;
 
-create policy if not exists "Users can delete their own follows" on public.follows
-  for delete using ((select auth.uid()) = follower_id);
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies 
+    where policyname = 'Users can delete their own follows' 
+    and schemaname = 'public' 
+    and tablename = 'follows'
+  ) then
+    create policy "Users can delete their own follows" on public.follows
+      for delete using ((select auth.uid()) = follower_id);
+  end if;
+end $$;
 
 -- Add a check constraint to limit total follows per user to 1000
 -- This prevents a user from following more than 1000 other users
@@ -125,21 +145,60 @@ $$;
 -- ------------------------------------------------------------
 -- 4. Grant permissions for the new functions
 -- ------------------------------------------------------------
-grant execute on function public.validate_photo_size(bigint) to authenticated, anon;
-grant execute on function public.photo_size_check() to authenticated, anon;
+do $$
+begin
+  if exists (select 1 from pg_proc where proname = 'validate_photo_size') then
+    grant execute on function public.validate_photo_size(bigint) to authenticated, anon;
+  end if;
+end $$;
+
+do $$
+begin
+  if exists (select 1 from pg_proc where proname = 'photo_size_check') then
+    grant execute on function public.photo_size_check() to authenticated, anon;
+  end if;
+end $$;
 
 -- ------------------------------------------------------------
 -- 5. Add helpful comments for documentation
 -- ------------------------------------------------------------
 
-comment on constraint sightings_daily_limit_check on public.sightings is
-  'Prevents users from creating more than 50 sightings per day. Counted from midnight UTC.';
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint 
+    where conname = 'sightings_daily_limit_check' 
+    and conrelid = 'public.sightings'::regclass
+  ) then
+    comment on constraint sightings_daily_limit_check on public.sightings is
+      'Prevents users from creating more than 50 sightings per day. Counted from midnight UTC.';
+  end if;
+end $$;
 
-comment on constraint follows_total_limit_check on public.follows is
-  'Prevents users from following more than 1000 other users total.';
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint 
+    where conname = 'follows_total_limit_check' 
+    and conrelid = 'public.follows'::regclass
+  ) then
+    comment on constraint follows_total_limit_check on public.follows is
+      'Prevents users from following more than 1000 other users total.';
+  end if;
+end $$;
 
-comment on function public.validate_photo_size is
-  'Validates that a photo size is within the 10MB limit. Returns true if valid, false otherwise.';
+do $$
+begin
+  if exists (select 1 from pg_proc where proname = 'validate_photo_size') then
+    comment on function public.validate_photo_size is
+      'Validates that a photo size is within the 10MB limit. Returns true if valid, false otherwise.';
+  end if;
+end $$;
 
-comment on function public.photo_size_check is
-  'Trigger function to enforce photo size limits. Raises an exception if size exceeds 10MB.';
+do $$
+begin
+  if exists (select 1 from pg_proc where proname = 'photo_size_check') then
+    comment on function public.photo_size_check is
+      'Trigger function to enforce photo size limits. Raises an exception if size exceeds 10MB.';
+  end if;
+end $$;
