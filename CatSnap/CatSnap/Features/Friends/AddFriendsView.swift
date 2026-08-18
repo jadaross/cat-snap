@@ -36,7 +36,7 @@ struct AddFriendsView: View {
                     .background(Color.creamSoft, in: .circle)
                     .overlay(Circle().stroke(Color.stoneLight, lineWidth: 1))
             }
-            Text("add friends")
+            Text(String(localized: "add friends"))
                 .font(.Brand.frauncesBlackItalic(size: 24))
                 .tracking(-0.6)
                 .foregroundStyle(Color.ink)
@@ -52,7 +52,7 @@ struct AddFriendsView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Color.stone)
-            TextField("Search by username…", text: $query)
+            TextField(String(localized: "Search by username…"), text: $query)
                 .font(.Brand.jakarta(.semibold, size: 14))
                 .foregroundStyle(Color.ink)
                 .textInputAutocapitalization(.never)

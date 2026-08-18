@@ -60,7 +60,7 @@ struct UserProfileView: View {
 
     private func failureView(_ message: String) -> some View {
         VStack(spacing: 12) {
-            Text("couldn't load profile")
+            Text(String(localized: "couldn't load profile"))
                 .font(.Brand.jakarta(.semibold, size: 16))
                 .foregroundStyle(Color.ink)
             Text(message)
@@ -68,7 +68,7 @@ struct UserProfileView: View {
                 .foregroundStyle(Color.stone)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-            Button("retry") { Task { await model.load() } }
+            Button(String(localized: "retry")) { Task { await model.load() } }
                 .font(.Brand.jakarta(.medium, size: 14))
                 .foregroundStyle(Color.coral)
         }

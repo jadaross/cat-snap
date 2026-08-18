@@ -37,7 +37,7 @@ struct AuthView: View {
 
                 HStack(spacing: 12) {
                     Rectangle().fill(Color.stoneLight).frame(height: 1)
-                    Text("or")
+                    Text(String(localized: "or"))
                         .font(.Brand.jakarta(.medium, size: 12))
                         .foregroundStyle(Color.stone)
                     Rectangle().fill(Color.stoneLight).frame(height: 1)
@@ -45,8 +45,8 @@ struct AuthView: View {
                 .padding(.horizontal, 32)
 
                 VStack(spacing: 12) {
-                    field("email", text: $email, keyboard: .emailAddress, secure: false)
-                    field("password", text: $password, keyboard: .default, secure: true)
+                    field(String(localized: "email"), text: $email, keyboard: .emailAddress, secure: false)
+                    field(String(localized: "password"), text: $password, keyboard: .default, secure: true)
 
                     if let error {
                         Text(error)
@@ -61,7 +61,7 @@ struct AuthView: View {
                     }
 
                     Button(action: submit) {
-                        Text(mode == .signIn ? "sign in" : "sign up")
+                        Text(mode == .signIn ? String(localized: "sign in") : String(localized: "sign up"))
                             .font(.Brand.jakarta(.semibold, size: 16))
                             .foregroundStyle(Color.creamSoft)
                             .frame(maxWidth: .infinity)
@@ -78,7 +78,7 @@ struct AuthView: View {
                     error = nil
                     info = nil
                 } label: {
-                    Text(mode == .signIn ? "no account? sign up" : "have an account? sign in")
+                    Text(mode == .signIn ? String(localized: "no account? sign up") : String(localized: "have an account? sign in"))
                         .font(.Brand.jakarta(.medium, size: 14))
                         .foregroundStyle(Color.stone)
                 }
