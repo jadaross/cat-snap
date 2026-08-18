@@ -158,15 +158,17 @@ struct SpotConfirmSheet: View {
     private func scheduleReverseGeocode() {
         reverseGeocodeTask?.cancel()
         let target = coordinate
-        reverseGeocodeTask = Task { [weak self] in
+        // `self` is a struct (SwiftUI View) — capturing it strongly creates no
+        // retain cycle, and `weak` isn't applicable to value types. The task is
+        // cancelled explicitly above on each reschedule.
+        reverseGeocodeTask = Task {
             try? await Task.sleep(nanoseconds: 350_000_000)
             if Task.isCancelled { return }
-            guard let self else { return }
-            let label = await self.locationManager.reverseGeocode(
+            let label = await locationManager.reverseGeocode(
                 CLLocation(latitude: target.latitude, longitude: target.longitude)
             )
             if Task.isCancelled { return }
-            await MainActor.run { self.locationLabel = label }
+            locationLabel = label
         }
     }
 

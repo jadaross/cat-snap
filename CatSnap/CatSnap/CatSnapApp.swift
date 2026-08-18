@@ -30,7 +30,7 @@ struct CatSnapApp: App {
             options.dsn = dsn
             options.debug = true
             options.tracesSampleRate = 0.0
-            options.sessionTracking = false
+            options.enableAutoSessionTracking = false
             options.enableAppHangTracking = false
             options.enableWatchdogTerminationTracking = false
         }
@@ -40,7 +40,7 @@ struct CatSnapApp: App {
             options.dsn = dsn
             options.debug = false
             options.tracesSampleRate = 0.1
-            options.sessionTracking = true
+            options.enableAutoSessionTracking = true
             options.enableAppHangTracking = true
             options.enableWatchdogTerminationTracking = true
             options.environment = "production"
