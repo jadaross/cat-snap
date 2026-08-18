@@ -83,16 +83,11 @@ Created as **CatSnap** (no hyphen), iOS, English (U.K.), bundle ID
 Note there are two bundle IDs on the account — `com.jadaross.cat-snap` is a
 leftover from the retired web project and is *not* the one to use.
 
-### 7. Declare EU Digital Services Act trader status — BLOCKS EU RELEASE
+### 7. Declare EU Digital Services Act trader status — ✅ SUBMITTED 18 Aug 2026
 
-App Store Connect → Business shows a red banner: trader status is undeclared.
-The account distributes to 175 countries, which includes the EU, and the DSA
-requires Apple to verify and publicly display trader contact details for
-anyone distributing there. Undeclared means the app cannot be listed in the EU.
-
-This is a legal declaration about your own circumstances and the contact
-details you supply are published on the store listing, so it has to be you.
-TestFlight still works without it.
+Declared and recorded against the 27 EU territories. Status is **In Review** —
+Apple verifies the declaration, so it is not instant. Check back on the
+Business tab; EU availability depends on it clearing.
 
 ---
 
@@ -125,7 +120,7 @@ TestFlight still works without it.
 
 1. ~~Accept the App Store Connect ToS.~~ done
 2. ~~Create the App Store Connect record.~~ done — CatSnap
-3. Declare DSA trader status (Business tab) — needed for EU release.
+3. ~~Declare DSA trader status.~~ submitted, In Review at Apple
 4. Plug in your iPhone so it gets registered.
 5. Set the Sentry DSN before building (it is baked in at build time).
 6. Xcode → Product → Archive. Let it create the distribution certificate.
