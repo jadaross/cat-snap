@@ -55,25 +55,30 @@ installed, so `xcodebuild` reported **zero eligible destinations** and no build
 of any kind could run. Resolved by `xcodebuild -downloadPlatform iOS` (8.5 GB).
 Re-check after any Xcode update.
 
-### 3. Register a device
+### 3. Register a device — ✅ DONE 18 Aug 2026
 
-The team has **zero registered devices**, so Xcode cannot mint a development
-provisioning profile — archiving fails with "Your team has no devices". Plug
-your iPhone in and let Xcode register it. Required before you can run on
-hardware; also the smoothest path to a first archive.
+"Mokos iPhone" (iPhone 16, UDID `00008140-001D546E0E89401C`) registered in
+the portal. Note: connecting the cable is NOT enough — `xcodebuild` never
+registers devices, only Xcode.app does, so this was registered by hand.
+Archiving failed with "Your team has no devices" until it was.
 
-### 4. Create the distribution certificate
+### 4. Create the distribution certificate — ✅ DONE 18 Aug 2026
 
-Only an **Apple Development** certificate exists. App Store distribution needs
-an **Apple Distribution** certificate. Xcode creates one automatically during
-Product → Archive → Distribute App, provided the account has Account Holder or
-Admin rights. No manual step expected, but it has not happened yet.
+Minted automatically during `xcodebuild -exportArchive -allowProvisioningUpdates`.
+The IPA is signed `Apple Distribution: Moko Ross (DFFRB59G23)` with an
+"iOS Team Store Provisioning Profile" and `get-task-allow = false`.
 
-### 5. Archive from the Xcode GUI
+### 5. Archive and upload — ✅ DONE 18 Aug 2026, build 1.0 (1)
 
-Automatic signing cannot be overridden from the command line, so the archive
-must go through Xcode: **Product → Archive → Distribute App → App Store Connect**.
-CLI archiving would require switching the project to manual signing.
+Correcting an earlier note in this file: the archive does **not** require the
+Xcode GUI. `xcodebuild archive` + `xcodebuild -exportArchive` with
+`-allowProvisioningUpdates` works end to end, including minting the
+distribution certificate and uploading. The earlier failures were the missing
+registered device, not a CLI limitation.
+
+Verified in the uploaded binary: `UIDeviceFamily = [1]`, iPhone orientations
+portrait-only, `ITSAppUsesNonExemptEncryption = false`, usage strings renamed
+to CatSnap, and a resolving `SENTRY_DSN`.
 
 ### 6. Create the App Store Connect record — ✅ DONE 18 Aug 2026
 
@@ -99,8 +104,11 @@ Business tab; EU availability depends on it clearing.
   map makes a poor screenshot.
 - **SMTP.** Email confirmation is on but no provider is wired. Default Supabase
   SMTP is rate-limited and lands in spam. Resend or Postmark.
-- **Sentry DSN.** `SENTRY_DSN` is absent from `CatSnap.xcconfig`. The app skips
-  Sentry init gracefully, so TestFlight would fly blind on crashes.
+- **Sentry dSYM upload failed.** The build uploaded, but symbol upload warned:
+  "archive did not include a dSYM for Sentry.framework". Crash reports from
+  inside the Sentry SDK itself will be unsymbolicated. App-code crashes are
+  unaffected. Fix by setting `DEBUG_INFORMATION_FORMAT = dwarf-with-dsym` for
+  dependencies, or upload dSYMs to Sentry manually.
 - **Localization is inert.** 36 `String(localized:)` call sites but no string
   catalog exists, so nothing is actually localizable. Fine for an en-only v1 —
   the scaffolding is there — but it does not do anything yet.
