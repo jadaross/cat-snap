@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0566B91A2FA27198005781EB /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 0566B9192FA27198005781EB /* Supabase */; };
+		05SENTRY001 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 05SENTRY002 /* Sentry */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +42,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0566B91A2FA27198005781EB /* Supabase in Frameworks */,
+				05SENTRY001 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -92,6 +94,7 @@
 			name = CatSnap;
 			packageProductDependencies = (
 				0566B9192FA27198005781EB /* Supabase */,
+				05SENTRY002 /* Sentry */,
 			);
 			productName = CatSnap;
 			productReference = 0566B8ED2FA26854005781EB /* CatSnap.app */;
@@ -123,6 +126,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				0566B9012FA269CD005781EB /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				05SENTRY003 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0566B8EE2FA26854005781EB /* Products */;
@@ -386,6 +390,14 @@
 				minimumVersion = 2.5.1;
 			};
 		};
+		05SENTRY003 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -393,6 +405,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0566B9012FA269CD005781EB /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		05SENTRY002 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 05SENTRY003 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
