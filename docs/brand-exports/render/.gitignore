@@ -1,0 +1,4 @@
+.build/
+*.xcodeproj/
+Sources/MarkRender/CatWindowMark.swift
+Sources/MarkRender/BrandColors.swift
