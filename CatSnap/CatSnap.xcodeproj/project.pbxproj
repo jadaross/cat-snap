@@ -11,8 +11,19 @@
 		05SENTRY001 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 05SENTRY002 /* Sentry */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		05TEST011 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0566B8E52FA26854005781EB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0566B8EC2FA26854005781EB;
+			remoteInfo = CatSnap;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		0566B8ED2FA26854005781EB /* CatSnap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CatSnap.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		05TEST001 /* CatSnapTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CatSnapTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -34,6 +45,11 @@
 			path = CatSnap;
 			sourceTree = "<group>";
 		};
+		05TEST002 /* CatSnapTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CatSnapTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -46,6 +62,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		05TEST005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -53,6 +76,7 @@
 			isa = PBXGroup;
 			children = (
 				0566B8EF2FA26854005781EB /* CatSnap */,
+				05TEST002 /* CatSnapTests */,
 				0566B9182FA27198005781EB /* Frameworks */,
 				0566B8EE2FA26854005781EB /* Products */,
 			);
@@ -62,6 +86,7 @@
 			isa = PBXGroup;
 			children = (
 				0566B8ED2FA26854005781EB /* CatSnap.app */,
+				05TEST001 /* CatSnapTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -100,6 +125,29 @@
 			productReference = 0566B8ED2FA26854005781EB /* CatSnap.app */;
 			productType = "com.apple.product-type.application";
 		};
+		05TEST003 /* CatSnapTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 05TEST007 /* Build configuration list for PBXNativeTarget "CatSnapTests" */;
+			buildPhases = (
+				05TEST004 /* Sources */,
+				05TEST005 /* Frameworks */,
+				05TEST006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				05TEST010 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				05TEST002 /* CatSnapTests */,
+			);
+			name = CatSnapTests;
+			packageProductDependencies = (
+			);
+			productName = CatSnapTests;
+			productReference = 05TEST001 /* CatSnapTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -112,6 +160,10 @@
 				TargetAttributes = {
 					0566B8EC2FA26854005781EB = {
 						CreatedOnToolsVersion = 26.4.1;
+					};
+					05TEST003 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = 0566B8EC2FA26854005781EB;
 					};
 				};
 			};
@@ -134,12 +186,20 @@
 			projectRoot = "";
 			targets = (
 				0566B8EC2FA26854005781EB /* CatSnap */,
+				05TEST003 /* CatSnapTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		0566B8EB2FA26854005781EB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		05TEST006 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -156,7 +216,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		05TEST004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		05TEST010 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0566B8EC2FA26854005781EB /* CatSnap */;
+			targetProxy = 05TEST011 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0566B8F62FA26855005781EB /* Debug */ = {
@@ -358,6 +433,50 @@
 			};
 			name = Release;
 		};
+		05TEST008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DFFRB59G23;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jadaross.CatSnapTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CatSnap.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CatSnap";
+			};
+			name = Debug;
+		};
+		05TEST009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DFFRB59G23;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jadaross.CatSnapTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CatSnap.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CatSnap";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -375,6 +494,15 @@
 			buildConfigurations = (
 				0566B8F92FA26855005781EB /* Debug */,
 				0566B8FA2FA26855005781EB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		05TEST007 /* Build configuration list for PBXNativeTarget "CatSnapTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				05TEST008 /* Debug */,
+				05TEST009 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
