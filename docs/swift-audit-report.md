@@ -77,6 +77,35 @@ in the app. `UserProfileView` (483) and `MapView` (408) follow. Splitting
 36 `String(localized:)` call sites, no string catalog. The scaffolding is
 there and it costs nothing, but nothing is actually localizable today.
 
+### 6. Blocking a user is silent and unconfirmed — moderation risk
+
+`FriendsActivityView.swift:123` is the only block entry point:
+
+```swift
+Task { try? await model.block(userId: sighting.userId) }
+```
+
+Two problems in one line:
+
+- **No confirmation.** Checklist §4.5 requires a dialog on every destructive
+  action. Delete-account has one; block does not. It is a single tap from an
+  overflow menu with no undo surfaced in the UI.
+- **`try?` swallows the failure.** If the insert into `public.blocks` fails,
+  the row still disappears from the local list, so the user is shown a
+  blocked user who is not actually blocked. Apple looks specifically at
+  whether block works under Guideline 1.2.
+
+### 7. `.preferredColorScheme(.dark)` in SubmitView — accepted exception, with a caveat
+
+`Features/Submit/SubmitView.swift:94`. `CLAUDE.md` forbids this outright, but
+the dark viewfinder is clearly deliberate — confirmed visually in the
+simulator. Worth recording as an accepted exception rather than "fixing".
+
+The caveat: `preferredColorScheme` propagates to sheets and system UI
+presented *from* that view. The photo picker and any alert raised inside the
+submit flow will render dark in an otherwise light-only app. Worth checking
+on device.
+
 ## Fixed since the previous report
 
 - Both compile errors above.

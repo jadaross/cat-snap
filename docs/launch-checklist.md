@@ -129,8 +129,8 @@ Run each of these and address findings before submission:
 - [ ] **`snyk_auth`** — log in once if the CLI / MCP isn't already authenticated.
 - [x] **`snyk_code_scan`** on the Swift sources under `CatSnap/CatSnap/` — static-analysis sweep for injection, weak crypto, insecure storage, hard-coded secrets.
 - [x] **`snyk_code_scan`** on `supabase/functions/delete-account/index.ts` — TypeScript / Deno scan covers JWT handling, service-role-key usage, path-traversal in storage list/remove.
-- [ ] **`snyk_iac_scan`** on `supabase/migrations/` — IaC scan for SQL DDL: missing RLS, overly broad GRANTs, dangerous `SECURITY DEFINER` functions without `search_path`.
-- [ ] **`snyk_sca_scan`** on `CatSnap/CatSnap.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` — supply-chain scan of every SPM dependency (supabase-swift, swift-crypto, etc.). Note any HIGH/CRITICAL CVEs even if not yet exploitable.
+- [x] ~~**`snyk_iac_scan`** on `supabase/migrations/`~~ **Not possible.** Verified 19 Aug: Snyk IaC supports Terraform, Kubernetes, CloudFormation, ARM and Serverless — *not* SQL DDL. It errors with "Could not find any valid IaC files". The RLS/GRANT/`search_path` review in §3.2 is the only route; treat it as mandatory, not belt-and-braces. Original intent — IaC scan for SQL DDL: missing RLS, overly broad GRANTs, dangerous `SECURITY DEFINER` functions without `search_path`.
+- [ ] **`snyk_sca_scan`** — blocked 19 Aug on `folder is not trusted`; needs `snyk_trust` run once by hand first. Path — supply-chain scan of every SPM dependency (supabase-swift, swift-crypto, etc.). Note any HIGH/CRITICAL CVEs even if not yet exploitable.
 - [ ] **`snyk_package_health_check`** on `supabase-swift` and any dep that gets flagged — confirms maintenance status, license, popularity.
 
 ### 3.2 Manual review (Snyk doesn't catch)
