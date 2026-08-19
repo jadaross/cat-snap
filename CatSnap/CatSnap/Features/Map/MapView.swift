@@ -370,35 +370,12 @@ struct MapView: View {
     /// coordinate (typically the user) is folded into the bounding box when
     /// supplied so the user's location isn't lost off-screen.
     private func frameCameraOnPins(includingUser user: CLLocationCoordinate2D? = nil) {
-        guard !model.sightings.isEmpty else { return }
-
-        var lats = model.sightings.map(\.lat)
-        var lngs = model.sightings.map(\.lng)
-        if let user {
-            lats.append(user.latitude)
-            lngs.append(user.longitude)
+        var coordinates = model.sightings.map {
+            CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng)
         }
+        if let user { coordinates.append(user) }
 
-        guard
-            let minLat = lats.min(), let maxLat = lats.max(),
-            let minLng = lngs.min(), let maxLng = lngs.max()
-        else { return }
-
-        let centre = CLLocationCoordinate2D(
-            latitude:  (minLat + maxLat) / 2,
-            longitude: (minLng + maxLng) / 2
-        )
-
-        // 1.4× padding around the bounding box so pins aren't kissing the
-        // edges. Minimum span keeps a single pin from zooming uncomfortably
-        // close (≈1km wide).
-        let minSpan: CGFloat = 0.009
-        let span = MKCoordinateSpan(
-            latitudeDelta:  max((maxLat - minLat) * 1.4, minSpan),
-            longitudeDelta: max((maxLng - minLng) * 1.4, minSpan)
-        )
-
-        let region = MKCoordinateRegion(center: centre, span: span)
+        guard let region = MKCoordinateRegion.fitting(coordinates) else { return }
         mapRegion = region
         withAnimation(.easeInOut(duration: 0.5)) {
             cameraPosition = .region(region)

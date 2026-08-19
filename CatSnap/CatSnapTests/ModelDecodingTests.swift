@@ -306,4 +306,103 @@ struct RPCArgumentEncodingTests {
         withEmptyTags.tags = []
         #expect(withEmptyTags.hasActiveFilters == false)
     }
+
+    // MARK: - sightings_for_cat (migration 0005)
+
+    @Test("CatSighting decodes the sightings_for_cat shape")
+    func catSightingDecodesRpcRow() throws {
+        let sighting = try PostgrestFixture.decode(CatSighting.self, from: """
+        {
+          "id": "aa11bb22-cc33-4d44-8e55-ff66aa77bb88",
+          "user_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+          "cat_id": "3f1e4d6a-0c2b-4a7e-9f11-2b3c4d5e6f70",
+          "photo_url": "https://example.test/sightings/1.jpg",
+          "location_label": "Brick Lane, E1",
+          "notes": "Asleep in a crate.",
+          "seen_at": "2026-08-18T14:32:58.123456+00:00",
+          "created_at": "2026-08-18T14:33:01.000001+00:00",
+          "lat": 51.5215,
+          "lng": -0.0716,
+          "username": "jada",
+          "display_name": "Jada",
+          "avatar_url": "https://example.test/avatars/jada.jpg"
+        }
+        """)
+
+        #expect(sighting.lat == 51.5215)
+        #expect(sighting.lng == -0.0716)
+        #expect(sighting.coordinate.latitude == 51.5215)
+        #expect(sighting.spotterName == "Jada")
+        #expect(sighting.locationLabel == "Brick Lane, E1")
+    }
+
+    @Test("CatSighting survives a deleted spotter and a photoless check-in")
+    func catSightingDecodesDanglingProfile() throws {
+        // profiles is LEFT JOINed, and record_spot writes photo_url = null,
+        // so both of these arrive together for a check-in by a deleted user.
+        let sighting = try PostgrestFixture.decode(CatSighting.self, from: """
+        {
+          "id": "aa11bb22-cc33-4d44-8e55-ff66aa77bb88",
+          "user_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+          "cat_id": null,
+          "photo_url": null,
+          "location_label": null,
+          "notes": null,
+          "seen_at": "2026-08-18T14:32:58+00:00",
+          "created_at": "2026-08-18T14:32:58+00:00",
+          "lat": 51.5,
+          "lng": -0.1,
+          "username": null,
+          "display_name": null,
+          "avatar_url": null
+        }
+        """)
+
+        #expect(sighting.photoUrl == nil)
+        // Must not crash or render an empty byline.
+        #expect(sighting.spotterName.isEmpty == false)
+    }
+
+    // MARK: - search_cats (migration 0005)
+
+    @Test("CatSuggestion decodes the search_cats shape")
+    func catSuggestionDecodesRpcRow() throws {
+        let suggestion = try PostgrestFixture.decode(CatSuggestion.self, from: """
+        {
+          "cat_id": "3f1e4d6a-0c2b-4a7e-9f11-2b3c4d5e6f70",
+          "cat_name": "Marmalade",
+          "primary_photo_url": "https://example.test/cats/marmalade.jpg",
+          "rarity": "rare",
+          "sighting_count": 12,
+          "last_seen_at": "2026-08-18T14:32:58.123456+00:00",
+          "last_photo_url": "https://example.test/sightings/9.jpg"
+        }
+        """)
+
+        #expect(suggestion.catName == "Marmalade")
+        #expect(suggestion.sightingCount == 12)
+        #expect(suggestion.rarity == .rare)
+        #expect(suggestion.id == suggestion.catId)
+    }
+
+    @Test("CatSuggestion decodes a never-spotted cat")
+    func catSuggestionDecodesZeroSightings() throws {
+        // coalesce(agg_count, 0) with no matching sightings, and a cat whose
+        // rarity default was never set.
+        let suggestion = try PostgrestFixture.decode(CatSuggestion.self, from: """
+        {
+          "cat_id": "3f1e4d6a-0c2b-4a7e-9f11-2b3c4d5e6f70",
+          "cat_name": "Biscuit",
+          "primary_photo_url": null,
+          "rarity": null,
+          "sighting_count": 0,
+          "last_seen_at": null,
+          "last_photo_url": null
+        }
+        """)
+
+        #expect(suggestion.sightingCount == 0)
+        #expect(suggestion.lastSeenAt == nil)
+        #expect(suggestion.rarity == nil)
+    }
 }

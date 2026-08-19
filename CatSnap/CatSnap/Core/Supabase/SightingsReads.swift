@@ -29,12 +29,13 @@ enum SightingsReads {
             .value
     }
 
-    static func forCat(_ catId: UUID) async throws -> [Sighting] {
+    /// Goes through an RPC rather than a table select because the cat profile
+    /// needs coordinates, and PostgREST returns the geography column as WKB
+    /// hex. The RPC also applies the symmetric blocks filter that a direct
+    /// select can't — RLS on `sightings` is `using (true)`.
+    static func forCat(_ catId: UUID, limit: Int = 500) async throws -> [CatSighting] {
         try await supabase
-            .from("sightings")
-            .select()
-            .eq("cat_id", value: catId)
-            .order("seen_at", ascending: false)
+            .rpc("sightings_for_cat", params: SightingsForCatParams(catId: catId, limit: limit))
             .execute()
             .value
     }
@@ -65,5 +66,15 @@ private struct SightingsNearParams: Encodable {
         case radius         = "p_radius"
         case limit          = "p_limit"
         case favoritesOnly  = "p_favorites_only"
+    }
+}
+
+private struct SightingsForCatParams: Encodable {
+    let catId: UUID
+    let limit: Int
+
+    enum CodingKeys: String, CodingKey {
+        case catId = "p_cat_id"
+        case limit = "p_limit"
     }
 }

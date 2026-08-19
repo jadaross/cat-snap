@@ -1,4 +1,5 @@
 import Foundation
+import CoreLocation
 
 // Matches the `sightings` table for inserts and single-record fetches.
 // Note: the PostGIS `location` column is intentionally not modelled here —
@@ -68,5 +69,56 @@ struct NearbySighting: Codable, Identifiable, Hashable, Sendable {
         case avatarUrl      = "avatar_url"
         case distanceM      = "distance_m"
         case isFavorite     = "is_favorite"
+    }
+}
+
+// Matches the return shape of the `public.sightings_for_cat` RPC (migration
+// 0005). Where `Sighting` is the raw table shape — and so has no coordinates,
+// because PostgREST hands the geography column back as WKB hex — this carries
+// lat/lng projected server-side plus the spotter's profile. That lets a cat
+// profile draw its territory map, its grid, and its spotter list from one read.
+struct CatSighting: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    let userId: UUID
+    let catId: UUID?
+    let photoUrl: URL?
+    let locationLabel: String?
+    let notes: String?
+    let seenAt: Date
+    let createdAt: Date
+    let lat: Double
+    let lng: Double
+    // Optional, unlike NearbySighting: the RPC left-joins profiles, so a
+    // deleted account leaves a real sighting with no spotter attached.
+    let username: String?
+    let displayName: String?
+    let avatarUrl: URL?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId         = "user_id"
+        case catId          = "cat_id"
+        case photoUrl       = "photo_url"
+        case locationLabel  = "location_label"
+        case notes
+        case seenAt         = "seen_at"
+        case createdAt      = "created_at"
+        case lat
+        case lng
+        case username
+        case displayName    = "display_name"
+        case avatarUrl      = "avatar_url"
+    }
+}
+
+extension CatSighting {
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: lat, longitude: lng)
+    }
+
+    /// Display name for the spotter, falling back through username to a
+    /// neutral placeholder for deleted accounts.
+    var spotterName: String {
+        displayName ?? username ?? String(localized: "someone")
     }
 }

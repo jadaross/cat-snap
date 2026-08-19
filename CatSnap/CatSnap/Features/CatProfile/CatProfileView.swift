@@ -6,6 +6,18 @@ struct CatProfileView: View {
     @State private var isSubmitPresented = false
     @State private var isSpotConfirmPresented = false
     @State private var reportTarget: ReportTarget?
+    @State private var statDetail: StatDetail?
+    @State private var isTerritoryMapPresented = false
+
+    /// Which stat tile was tapped. Presented as a sheet rather than a push:
+    /// all three NavigationStacks that host this screen (MapView,
+    /// GuideListView, UserProfileView) already register a
+    /// `.navigationDestination(for: UUID.self)` pointing back here, so a
+    /// second UUID-keyed destination would collide.
+    private enum StatDetail: String, Identifiable, Hashable {
+        case sightings, spotters, firstSighting
+        var id: String { rawValue }
+    }
 
     init(catId: UUID) {
         _model = State(initialValue: CatProfileModel(catId: catId))
@@ -31,6 +43,29 @@ struct CatProfileView: View {
         }
         .sheet(item: $reportTarget) { target in
             ReportSheet(target: target)
+        }
+        .sheet(item: $statDetail) { detail in
+            statDetailSheet(detail)
+        }
+        .sheet(isPresented: $isTerritoryMapPresented) {
+            if case .loaded(let cat, let sightings) = model.state {
+                CatTerritoryMapSheet(catName: cat.name, sightings: sightings)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func statDetailSheet(_ detail: StatDetail) -> some View {
+        if case .loaded(let cat, let sightings) = model.state {
+            switch detail {
+            case .sightings:
+                CatSightingsSheet(catName: cat.name, sightings: sightings)
+            case .spotters:
+                CatSpottersSheet(sightings: sightings)
+            case .firstSighting:
+                // Loaded seen_at DESC, so the earliest is last.
+                FirstSightingSheet(catName: cat.name, sighting: sightings.last)
+            }
         }
     }
 
@@ -70,7 +105,7 @@ struct CatProfileView: View {
     }
 
     // Source: `CatSnap App.html` lines 815–901 (CatProfile screen).
-    private func loadedView(cat: Cat, sightings: [Sighting]) -> some View {
+    private func loadedView(cat: Cat, sightings: [CatSighting]) -> some View {
         ZStack(alignment: .bottom) {
             ScrollView {
                 VStack(spacing: 0) {
@@ -82,7 +117,7 @@ struct CatProfileView: View {
         }
     }
 
-    private func hero(cat: Cat, sightings: [Sighting]) -> some View {
+    private func hero(cat: Cat, sightings: [CatSighting]) -> some View {
         let photoUrl = cat.primaryPhotoUrl ?? sightings.first?.photoUrl
 
         return ZStack(alignment: .top) {
@@ -146,7 +181,7 @@ struct CatProfileView: View {
         .padding(.top, 56) // safe-area approximation; exact layout via .ignoresSafeArea(.top)
     }
 
-    private func heroTitleBlock(cat: Cat, sightings: [Sighting]) -> some View {
+    private func heroTitleBlock(cat: Cat, sightings: [CatSighting]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             heroBadge(cat: cat, sightingCount: sightings.count)
             Text((cat.name ?? "unnamed").lowercased())
@@ -173,7 +208,7 @@ struct CatProfileView: View {
     }
 
     @ViewBuilder
-    private func heroSubtitle(sightings: [Sighting]) -> some View {
+    private func heroSubtitle(sightings: [CatSighting]) -> some View {
         if let text = heroSubtitleText(sightings: sightings) {
             Text(text)
                 .font(.Brand.jakarta(.bold, size: 13))
@@ -182,7 +217,7 @@ struct CatProfileView: View {
         }
     }
 
-    private func heroSubtitleText(sightings: [Sighting]) -> String? {
+    private func heroSubtitleText(sightings: [CatSighting]) -> String? {
         guard let last = sightings.first else { return nil }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
@@ -192,9 +227,10 @@ struct CatProfileView: View {
     }
 
     // Body card with stats / mini-map / sightings grid sliding up over the hero.
-    private func infoBody(cat: Cat, sightings: [Sighting]) -> some View {
+    private func infoBody(cat: Cat, sightings: [CatSighting]) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             statsRow(sightings: sightings, cat: cat)
+            territorySection(sightings: sightings)
             sightingsGrid(sightings: sightings)
             Color.clear.frame(height: 144) // breathing room behind sticky CTA (two-button stack)
         }
@@ -211,52 +247,134 @@ struct CatProfileView: View {
         .offset(y: -14)
     }
 
-    private func statsRow(sightings: [Sighting], cat: Cat) -> some View {
+    private func statsRow(sightings: [CatSighting], cat: Cat) -> some View {
         HStack(spacing: 8) {
             statCard(
                 value: "\(sightings.count)",
-                label: "SIGHTINGS"
-            )
+                label: "SIGHTINGS",
+                isEnabled: !sightings.isEmpty
+            ) { statDetail = .sightings }
+
             statCard(
                 value: uniqueSpotterValue(sightings: sightings),
-                label: "SPOTTERS"
-            )
+                label: "SPOTTERS",
+                isEnabled: !sightings.isEmpty
+            ) { statDetail = .spotters }
+
+            // Was labelled KNOWN FOR over a duration ("42d"), which described
+            // neither a thing the cat is known for nor the first-sighting
+            // detail behind the tap. A date says both.
             statCard(
-                value: knownForValue(sightings: sightings, cat: cat),
-                label: "KNOWN FOR"
-            )
+                value: firstSeenValue(sightings: sightings, cat: cat),
+                label: "FIRST SEEN",
+                isEnabled: !sightings.isEmpty
+            ) { statDetail = .firstSighting }
         }
     }
 
-    private func statCard(value: String, label: String) -> some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.Brand.frauncesBlackItalic(size: 26))
-                .tracking(-0.6)
-                .foregroundStyle(Color.ink)
-            Text(label)
-                .font(.Brand.mono(size: 9))
-                .tracking(0.8)
-                .foregroundStyle(Color.stone)
+    private func statCard(
+        value: String,
+        label: String,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Text(value)
+                    .font(.Brand.frauncesBlackItalic(size: 26))
+                    .tracking(-0.6)
+                    .foregroundStyle(Color.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(label)
+                    .font(.Brand.mono(size: 9))
+                    .tracking(0.8)
+                    .foregroundStyle(Color.stone)
+            }
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(Color.creamSoft, in: .rect(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.stoneLight, lineWidth: 1))
+            // Deliberately not coral — three coral tiles would compete with
+            // the sticky CTA below them.
+            .overlay(alignment: .topTrailing) {
+                if isEnabled {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(Color.stone.opacity(0.6))
+                        .padding(7)
+                }
+            }
+            .contentShape(.rect(cornerRadius: 12))
         }
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity)
-        .background(Color.creamSoft, in: .rect(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.stoneLight, lineWidth: 1))
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
     }
 
-    private func uniqueSpotterValue(sightings: [Sighting]) -> String {
+    private func uniqueSpotterValue(sightings: [CatSighting]) -> String {
         let unique = Set(sightings.map { $0.userId }).count
         return "\(unique)"
     }
 
-    private func knownForValue(sightings: [Sighting], cat: Cat) -> String {
+    private func firstSeenValue(sightings: [CatSighting], cat: Cat) -> String {
         let earliest = sightings.last?.seenAt ?? cat.createdAt
-        let days = Calendar.current.dateComponents([.day], from: earliest, to: Date()).day ?? 0
-        return "\(max(days, 1))d"
+        let formatter = DateFormatter()
+        // Drop the year for same-year sightings — "3 Mar" reads better than
+        // "3 Mar 2026" in a 26pt display face inside a third of the width.
+        let sameYear = Calendar.current.isDate(earliest, equalTo: Date(), toGranularity: .year)
+        formatter.setLocalizedDateFormatFromTemplate(sameYear ? "d MMM" : "MMM yy")
+        return formatter.string(from: earliest)
     }
 
-    private func sightingsGrid(sightings: [Sighting]) -> some View {
+    @ViewBuilder
+    private func territorySection(sightings: [CatSighting]) -> some View {
+        if !sightings.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("where they hang out")
+                        .font(.Brand.frauncesBlackItalic(size: 20))
+                        .tracking(-0.5)
+                        .foregroundStyle(Color.ink)
+                    Spacer()
+                    Text(territoryCaption(sightings: sightings))
+                        .font(.Brand.mono(size: 9))
+                        .tracking(0.8)
+                        .foregroundStyle(Color.stone)
+                }
+
+                Button { isTerritoryMapPresented = true } label: {
+                    CatTerritoryMap(sightings: sightings)
+                        .clipShape(.rect(cornerRadius: 14))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color.stoneLight, lineWidth: 1)
+                        )
+                        .overlay(alignment: .bottomTrailing) {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(Color.ink)
+                                .frame(width: 28, height: 28)
+                                .background(Color.creamSoft, in: .circle)
+                                .overlay(Circle().stroke(Color.stoneLight, lineWidth: 1))
+                                .padding(8)
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(String(localized: "open the full map"))
+            }
+        }
+    }
+
+    private func territoryCaption(sightings: [CatSighting]) -> String {
+        let places = Set(sightings.compactMap { $0.locationLabel?.lowercased() }).count
+        let spots = sightings.count == 1
+            ? String(localized: "1 SPOT")
+            : String(localized: "\(sightings.count) SPOTS")
+        guard places > 1 else { return spots }
+        return spots + String(localized: " ACROSS \(places) PLACES")
+    }
+
+    private func sightingsGrid(sightings: [CatSighting]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
                 Text("recent sightings")
@@ -265,10 +383,14 @@ struct CatProfileView: View {
                     .foregroundStyle(Color.ink)
                 Spacer()
                 if sightings.count > 6 {
-                    Text("SEE ALL")
-                        .font(.Brand.mono(size: 10))
-                        .tracking(0.8)
-                        .foregroundStyle(Color.stone)
+                    // Was a bare Text pretending to be a button.
+                    Button { statDetail = .sightings } label: {
+                        Text("SEE ALL")
+                            .font(.Brand.mono(size: 10))
+                            .tracking(0.8)
+                            .foregroundStyle(Color.coral)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
 
@@ -283,7 +405,10 @@ struct CatProfileView: View {
                     spacing: 6
                 ) {
                     ForEach(sightings.prefix(9)) { sighting in
-                        SightingThumbnail(photoUrl: sighting.photoUrl, seenAt: sighting.seenAt)
+                        Button { statDetail = .sightings } label: {
+                            SightingThumbnail(photoUrl: sighting.photoUrl, seenAt: sighting.seenAt)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }

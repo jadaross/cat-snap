@@ -284,6 +284,7 @@ struct SubmitView: View {
                     locationCard
                     sectionLabel("NAME")
                     nameField
+                    nameSuggestions
                     sectionLabel("TAGS")
                     tagChips
                     if case .error(let msg) = model.stage {
@@ -437,6 +438,138 @@ struct SubmitView: View {
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.stoneLight, lineWidth: 1))
             .textInputAutocapitalization(.words)
             .autocorrectionDisabled()
+            .onChange(of: model.catName) { _, _ in model.nameChanged() }
+    }
+
+    // Type-ahead over existing cats. Without it every sighting filed from the
+    // tab-bar Snap minted a brand-new cat, so a cat spotted five times became
+    // five cats. Selection is sticky rather than a plain text autocomplete —
+    // attaching to an existing cat and creating a new one look identical once
+    // the text matches, so the choice has to stay visible.
+    @ViewBuilder
+    private var nameSuggestions: some View {
+        if let selected = model.selectedCat {
+            selectedCatRow(selected)
+        } else if !model.isCatPrefilled {
+            VStack(spacing: 6) {
+                ForEach(model.suggestions.prefix(5)) { suggestion in
+                    Button { model.selectSuggestion(suggestion) } label: {
+                        suggestionRow(suggestion)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // Keeps deliberate duplicates possible — two different cats
+                // called Marmalade in two cities is a normal thing.
+                if !model.suggestions.isEmpty {
+                    Button { model.clearSelection() } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 11, weight: .bold))
+                            Text(String(localized: "new cat named \"\(trimmedCatName)\""))
+                                .font(.Brand.jakarta(.bold, size: 13))
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                        }
+                        .foregroundStyle(Color.stone)
+                        .padding(.horizontal, 14)
+                        .frame(height: 40)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.cream, in: .rect(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(Color.stoneLight, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var trimmedCatName: String {
+        model.catName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func suggestionRow(_ suggestion: CatSuggestion) -> some View {
+        HStack(spacing: 10) {
+            AsyncCatImage(url: suggestion.primaryPhotoUrl ?? suggestion.lastPhotoUrl)
+                .frame(width: 36, height: 36)
+                .clipShape(.circle)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(suggestion.catName ?? String(localized: "unnamed"))
+                    .font(.Brand.jakarta(.bold, size: 14))
+                    .foregroundStyle(Color.ink)
+                    .lineLimit(1)
+                Text(suggestionDetail(suggestion))
+                    .font(.Brand.mono(size: 10))
+                    .tracking(0.6)
+                    .foregroundStyle(Color.stone)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+
+            if let rarity = suggestion.rarity {
+                RarityBadge(rarity: rarity, size: .small)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(Color.creamSoft, in: .rect(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.stoneLight, lineWidth: 1))
+    }
+
+    private func selectedCatRow(_ suggestion: CatSuggestion) -> some View {
+        HStack(spacing: 10) {
+            AsyncCatImage(url: suggestion.primaryPhotoUrl ?? suggestion.lastPhotoUrl)
+                .frame(width: 36, height: 36)
+                .clipShape(.circle)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(String(localized: "logging under \(suggestion.catName ?? "this cat")"))
+                    .font(.Brand.jakarta(.bold, size: 14))
+                    .foregroundStyle(Color.ink)
+                    .lineLimit(1)
+                Text(suggestionDetail(suggestion))
+                    .font(.Brand.mono(size: 10))
+                    .tracking(0.6)
+                    .foregroundStyle(Color.stone)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+
+            Button { model.clearSelection() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.stone)
+                    .frame(width: 28, height: 28)
+                    .contentShape(.circle)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "file under a new cat instead"))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(Color.creamSoft, in: .rect(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.coral, lineWidth: 1.5))
+    }
+
+    private func suggestionDetail(_ suggestion: CatSuggestion) -> String {
+        var parts: [String] = []
+        parts.append(suggestion.sightingCount == 1
+                     ? String(localized: "1 SIGHTING")
+                     : String(localized: "\(suggestion.sightingCount) SIGHTINGS"))
+        if let last = suggestion.lastSeenAt {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .abbreviated
+            parts.append(formatter.localizedString(for: last, relativeTo: Date()).uppercased())
+        }
+        return parts.joined(separator: " · ")
     }
 
     private var tagChips: some View {

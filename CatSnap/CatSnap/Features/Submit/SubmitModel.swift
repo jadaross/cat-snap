@@ -38,6 +38,12 @@ final class SubmitModel {
     /// would take the map — the only way to recover — off screen.
     var locationNotice: String?
     var catName: String = ""
+    /// Existing cats matching what's been typed. Empty when the field is too
+    /// short, when a suggestion has been accepted, or when the search failed.
+    private(set) var suggestions: [CatSuggestion] = []
+    private(set) var isSearching = false
+    /// The cat this sighting will be filed under. Nil means "create a new one".
+    private(set) var selectedCat: CatSuggestion?
     var tags: Set<String> = []
     /// When set, overrides `Date()` in the submit payload — used when an
     /// uploaded photo carries an EXIF DateTimeOriginal so the sighting is
@@ -57,6 +63,7 @@ final class SubmitModel {
     private let locationManager = LocationManager()
     private var reverseGeocodeTask: Task<Void, Never>?
     private var locationTask: Task<Void, Never>?
+    private var searchTask: Task<Void, Never>?
 
     init(prefilledCatId: UUID? = nil) {
         self.prefilledCatId = prefilledCatId
@@ -64,6 +71,68 @@ final class SubmitModel {
 
     /// Ready to file: a photo, and a pin the user or their device stands behind.
     var canSubmit: Bool { image != nil && isLocationConfirmed }
+
+    /// The cat to attach to, if any. A tapped suggestion wins; otherwise the
+    /// id we were opened with (from a cat profile); otherwise nil, meaning
+    /// `create_sighting_with_cat` will mint a new cat from `catName`.
+    var resolvedCatId: UUID? { selectedCat?.catId ?? prefilledCatId }
+
+    /// Opened from a cat profile — the cat is already decided, so the name
+    /// field shouldn't be offering alternatives.
+    var isCatPrefilled: Bool { prefilledCatId != nil }
+
+    // MARK: - Name suggestions
+
+    /// Debounced type-ahead. A failed search yields no suggestions rather than
+    /// an error: not finding an existing cat must never block filing one.
+    func nameChanged() {
+        searchTask?.cancel()
+
+        // Typing past an accepted suggestion means the user wants something
+        // else — drop the attachment rather than silently filing under a cat
+        // whose name is no longer on screen.
+        if let selected = selectedCat, selected.catName != catName {
+            selectedCat = nil
+        }
+
+        guard !isCatPrefilled, selectedCat == nil else {
+            suggestions = []
+            return
+        }
+
+        let query = catName
+        guard query.trimmingCharacters(in: .whitespacesAndNewlines).count
+                >= CatReads.minimumQueryLength else {
+            suggestions = []
+            isSearching = false
+            return
+        }
+
+        isSearching = true
+        searchTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            guard let self, !Task.isCancelled else { return }
+            let found = (try? await CatReads.search(query: query)) ?? []
+            guard !Task.isCancelled else { return }
+            self.suggestions = found
+            self.isSearching = false
+        }
+    }
+
+    func selectSuggestion(_ suggestion: CatSuggestion) {
+        selectedCat = suggestion
+        catName = suggestion.catName ?? catName
+        suggestions = []
+        isSearching = false
+        searchTask?.cancel()
+    }
+
+    /// Back out of an accepted suggestion — the user meant a different cat
+    /// that happens to share the name.
+    func clearSelection() {
+        selectedCat = nil
+        nameChanged()
+    }
 
     func acceptPhoto(_ image: UIImage) async {
         self.image = image
@@ -208,7 +277,7 @@ final class SubmitModel {
                 locationLabel: locationLabel,
                 seenAt: exifSeenAt ?? Date(),
                 catName: trimmedName.isEmpty ? nil : trimmedName,
-                existingCatId: prefilledCatId,
+                existingCatId: resolvedCatId,
                 tags: tags.sorted()
             )
             stage = .done

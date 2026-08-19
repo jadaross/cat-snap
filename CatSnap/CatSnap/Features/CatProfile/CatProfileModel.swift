@@ -8,7 +8,7 @@ final class CatProfileModel {
     enum State {
         case idle
         case loading
-        case loaded(Cat, [Sighting])
+        case loaded(Cat, [CatSighting])
         case failed(String)
     }
 
@@ -30,7 +30,7 @@ final class CatProfileModel {
                 .execute()
                 .value
 
-            async let sightings: [Sighting] = SightingsReads.forCat(catId)
+            async let sightings: [CatSighting] = SightingsReads.forCat(catId)
 
             async let favoriteResponse: [FavoriteRow] = supabase
                 .from("favorites")
