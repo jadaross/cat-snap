@@ -12,11 +12,35 @@ struct CatSnapTabBar: View {
     /// uses this to pop nav stacks to root and reset secondary state.
     var onTabReselect: ((MainTabView.Tab) -> Void)? = nil
 
-    private let barHeight: CGFloat = 76
+    static let barHeight: CGFloat = 76
+    static let snapOverflow: CGFloat = 36   // distance button protrudes above bar top
+
+    /// Total vertical space the bar occupies, including the slice of the snap
+    /// button that overhangs its top edge. Hosts must inset content by this —
+    /// insetting by `barHeight` alone leaves the button's overhang floating
+    /// over content, where its circular hit area silently eats taps.
+    static let occupiedHeight: CGFloat = barHeight + snapOverflow
+
     private let snapSize: CGFloat = 96
-    private let snapOverflow: CGFloat = 36   // distance button protrudes above bar top
 
     var body: some View {
+        VStack(spacing: 0) {
+            // Reserved, tap-transparent band standing in for the button's
+            // overhang, so the bar reports its true height to `safeAreaInset`.
+            Color.clear
+                .frame(height: Self.snapOverflow)
+                .allowsHitTesting(false)
+
+            barRow
+        }
+        .overlay(alignment: .top) {
+            // Top-aligned against the reserved band, so the button lands in
+            // exactly the spot the old `.offset(y: -snapOverflow)` put it.
+            SnapButton(size: snapSize, action: onSnap)
+        }
+    }
+
+    private var barRow: some View {
         HStack(alignment: .top, spacing: 0) {
             TabItem(
                 glyph: ExploreGlyph(),
@@ -33,7 +57,7 @@ struct CatSnapTabBar: View {
 
             // Reserved column for the floating snap button — keeps the side
             // tabs balanced. Width matches the JSX (110pt).
-            Color.clear.frame(width: 110, height: barHeight)
+            Color.clear.frame(width: 110, height: Self.barHeight)
 
             TabItem(
                 glyph: ProfileGlyph(),
@@ -48,7 +72,7 @@ struct CatSnapTabBar: View {
                 }
             )
         }
-        .frame(maxWidth: .infinity, minHeight: barHeight, alignment: .top)
+        .frame(maxWidth: .infinity, minHeight: Self.barHeight, alignment: .top)
         .background(
             Color.creamSoft
                 .overlay(alignment: .top) {
@@ -56,10 +80,6 @@ struct CatSnapTabBar: View {
                 }
                 .ignoresSafeArea(edges: .bottom)
         )
-        .overlay(alignment: .top) {
-            SnapButton(size: snapSize, action: onSnap)
-                .offset(y: -snapOverflow)
-        }
     }
 }
 

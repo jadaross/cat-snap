@@ -133,7 +133,10 @@ struct MapView: View {
             if !model.isLoading && model.sightings.isEmpty {
                 emptyStateCard
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 96)
+                    // 60 rather than 96: the tab bar now claims its snap-button
+                    // overhang via safeAreaInset, so the card already starts
+                    // 36pt higher than it used to.
+                    .padding(.bottom, 60)
                     .transition(.opacity)
             }
 

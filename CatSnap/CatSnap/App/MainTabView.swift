@@ -8,16 +8,19 @@ struct MainTabView: View {
     enum Tab: Hashable { case explore, you }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Group {
-                switch selectedTab {
-                case .explore: ExploreView(view: $exploreView)
-                case .you:     UserProfileView()
-                }
+        Group {
+            switch selectedTab {
+            case .explore: ExploreView(view: $exploreView)
+            case .you:     UserProfileView()
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.bottom, 76)
-
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // safeAreaInset rather than a ZStack overlay: the bar reports its full
+        // occupied height (bar + snap-button overhang), so every screen below
+        // is inset clear of the button instead of having its bottom controls
+        // sit under it. Screens that want to bleed art under the bar opt out
+        // with their own .ignoresSafeArea(edges: .bottom).
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             CatSnapTabBar(
                 active: $selectedTab,
                 onSnap: { isSubmitPresented = true },
