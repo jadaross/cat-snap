@@ -442,3 +442,38 @@ grant execute on function public.guide_list(boolean, text, text[], text[], times
 -- No DDL is required for account deletion itself; the existing FKs do
 -- the cascading work once the auth.users row is removed.
 -- ============================================================
+
+-- ============================================================
+-- 11. CAT SEARCH + PER-CAT MAP  (migration 0005)
+-- Reference copy. `supabase/migrations/0005_cat_search_and_cat_map.sql`
+-- is the source of truth; the full bodies live there.
+--
+-- Two read-side RPCs, both security definer with a pinned search_path and
+-- the symmetric blocks filter every read RPC owes.
+--
+--   search_cats(p_query text, p_limit integer default 8)
+--     -> cat_id uuid, cat_name text, primary_photo_url text, rarity text,
+--        sighting_count bigint, last_seen_at timestamptz,
+--        last_photo_url text
+--     Type-ahead over cats.name for the Submit form, so a repeat sighting
+--     attaches to the existing cat rather than minting a duplicate.
+--     Returns nothing under 2 characters. Escapes \ % _ and passes an
+--     explicit ESCAPE — unlike search_profiles (0002), which interpolates
+--     raw, so a query of '%' matches everything there.
+--     Ordered: exact name > prefix > most-spotted > name.
+--
+--   sightings_for_cat(p_cat_id uuid, p_limit integer default 500)
+--     -> the sightings columns, plus
+--        lat/lng double precision  (st_y/st_x of location::geometry)
+--        username, display_name, avatar_url  (LEFT JOIN profiles)
+--     Every sighting of one cat, with coordinates. Needed because
+--     sightings.location is geography(Point,4326) with no lat/lng columns,
+--     and PostgREST returns it as WKB hex — so a plain table select can't
+--     feed a map. sightings_near can't substitute: no p_cat_id, filters by
+--     ST_DWithin around a centre, and applies p_limit globally.
+--
+-- Supporting indexes:
+--   pg_trgm extension (schema `extensions`)
+--   cats_name_trgm_idx           gin (name extensions.gin_trgm_ops)
+--   sightings_cat_id_seen_at_idx (cat_id, seen_at desc)
+-- ============================================================
