@@ -32,13 +32,48 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         manager.desiredAccuracy = kCLLocationAccuracyBest
     }
 
+    /// A fix younger than this is good enough to pin a sighting, and reusing
+    /// it saves a round-trip through CoreLocation.
+    private static let freshFixWindow: TimeInterval = 60
+
     /// One-shot location fix. If authorization hasn't been decided, prompts
     /// the user and waits for the response before requesting a location.
-    func requestOneShot() async throws -> CLLocation {
+    ///
+    /// Guaranteed to return or throw within `timeout`. CoreLocation can accept
+    /// `requestLocation()` and then never call back — most reproducibly when
+    /// the permission alert is raised while a sheet is still dismissing — and
+    /// without a deadline the caller waits on a spinner forever.
+    func requestOneShot(timeout: Duration = .seconds(8)) async throws -> CLLocation {
+        if let cached = lastLocation,
+           Date().timeIntervalSince(cached.timestamp) < Self.freshFixWindow {
+            return cached
+        }
+
         try await ensureAuthorized()
 
         isResolving = true
         defer { isResolving = false }
+
+        return try await withThrowingTaskGroup(of: CLLocation.self) { group in
+            group.addTask { @MainActor in try await self.awaitFix() }
+            group.addTask {
+                try await Task.sleep(for: timeout)
+                throw LocationError.unavailable
+            }
+            defer { group.cancelAll() }
+            guard let first = try await group.next() else { throw LocationError.unavailable }
+            return first
+        }
+    }
+
+    private func awaitFix() async throws -> CLLocation {
+        // Two overlapping calls are reachable (the initial capture racing the
+        // "use my location" button). Without this the second overwrites the
+        // first's continuation and leaks it, hanging that caller for good.
+        if let stale = locationContinuation {
+            locationContinuation = nil
+            stale.resume(throwing: CancellationError())
+        }
 
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { cont in
@@ -118,6 +153,14 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
             self.locationContinuation = nil
         }
     }
+}
+
+extension CLLocationCoordinate2D {
+    /// Fallback pin for any surface that must show a map before a real fix
+    /// lands. Central London — chosen when the app was London-only, and kept
+    /// so the map is always draggable rather than absent. Never submitted
+    /// without the user confirming the spot.
+    static let fallback = CLLocationCoordinate2D(latitude: 51.5074, longitude: -0.1278)
 }
 
 private extension String {

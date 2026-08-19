@@ -23,6 +23,22 @@ struct SubmitView: View {
                 }
                 content
             }
+            // Attached to the root, not to photoSourceView: that view is torn
+            // down the instant the stage changes, taking any handler on it —
+            // and any in-flight presentation — with it.
+            .onChange(of: pickedItem) { _, newItem in
+                guard let newItem else { return }
+                // Clear immediately so re-picking the same asset still fires;
+                // PhotosPickerItem equality is by asset identity.
+                pickedItem = nil
+                Task {
+                    if let data = try? await newItem.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        let exif = ExifMetadata.extract(from: data)
+                        await model.acceptUploadedPhoto(image, exif: exif)
+                    }
+                }
+            }
             .navigationTitle(isOnCameraStage ? "" : String(localized: "snap a sighting"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(isOnCameraStage ? .hidden : .visible, for: .navigationBar)
@@ -46,8 +62,6 @@ struct SubmitView: View {
         switch model.stage {
         case .pickingPhoto:
             photoSourceView
-        case .capturingLocation:
-            locationCapturingView
         case .editing, .submitting, .error:
             editorView
         case .done:
@@ -97,16 +111,6 @@ struct SubmitView: View {
                 Task { await model.acceptPhoto(image) }
             }
             .ignoresSafeArea()
-        }
-        .onChange(of: pickedItem) { _, newItem in
-            guard let newItem else { return }
-            Task {
-                if let data = try? await newItem.loadTransferable(type: Data.self),
-                   let image = UIImage(data: data) {
-                    let exif = ExifMetadata.extract(from: data)
-                    await model.acceptUploadedPhoto(image, exif: exif)
-                }
-            }
         }
     }
 
@@ -215,15 +219,6 @@ struct SubmitView: View {
         }
     }
 
-    private var locationCapturingView: some View {
-        VStack(spacing: 16) {
-            ProgressView().tint(Color.coral)
-            Text(String(localized: "getting your location…"))
-                .font(.Brand.jakarta(.medium, size: 14))
-                .foregroundStyle(Color.stone)
-        }
-    }
-
     // MARK: - Editor
 
     private var editorView: some View {
@@ -316,61 +311,76 @@ struct SubmitView: View {
             .foregroundStyle(Color.stone)
     }
 
-    @ViewBuilder
+    // Unconditional by design. This used to be gated on a non-nil location,
+    // so any failed or slow device fix rendered no map at all — leaving the
+    // user with no way to say where they were. The pin now always exists;
+    // `model.isLocationConfirmed` is what decides whether it may be filed.
     private var locationCard: some View {
-        if let location = model.location {
-            VStack(alignment: .leading, spacing: 8) {
-                MapPinPicker(
-                    coordinate: Binding(
-                        get: { location.coordinate },
-                        set: { model.updatePin(to: $0) }
-                    ),
-                    height: 160,
-                    onRecentre: nil
-                )
-
-                if let label = model.locationLabel, !label.isEmpty {
-                    Text(label.uppercased())
-                        .font(.Brand.mono(size: 10))
-                        .tracking(0.8)
-                        .foregroundStyle(Color.stone)
+        VStack(alignment: .leading, spacing: 8) {
+            MapPinPicker(
+                coordinate: Binding(
+                    get: { model.location.coordinate },
+                    set: { model.updatePin(to: $0) }
+                ),
+                height: 160,
+                onRecentre: { await model.recentreOnDevice() }
+            )
+            .overlay(alignment: .topTrailing) {
+                if model.isResolvingLocation {
+                    ProgressView()
+                        .tint(Color.coral)
+                        .padding(6)
+                        .background(Color.creamSoft, in: .capsule)
+                        .padding(8)
                 }
+            }
 
-                HStack(spacing: 8) {
-                    Button { Task { await model.usePinFromDeviceLocation() } } label: {
+            if let notice = model.locationNotice {
+                Text(notice)
+                    .font(.Brand.jakarta(.medium, size: 12))
+                    .foregroundStyle(Color.coralDeep)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if let label = model.locationLabel, !label.isEmpty {
+                Text(label.uppercased())
+                    .font(.Brand.mono(size: 10))
+                    .tracking(0.8)
+                    .foregroundStyle(Color.stone)
+            }
+
+            HStack(spacing: 8) {
+                Button { Task { await model.usePinFromDeviceLocation() } } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(String(localized: "use my location"))
+                            .font(.Brand.jakarta(.bold, size: 12))
+                    }
+                    .foregroundStyle(Color.coral)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.creamSoft, in: .capsule)
+                    .overlay(Capsule().stroke(Color.stoneLight, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+
+                if model.exifLocation != nil {
+                    Button { Task { await model.usePinFromExif() } } label: {
                         HStack(spacing: 4) {
-                            Image(systemName: "location.fill")
+                            Image(systemName: "photo.fill")
                                 .font(.system(size: 11, weight: .semibold))
-                            Text(String(localized: "use my location"))
+                            Text(String(localized: "use photo location"))
                                 .font(.Brand.jakarta(.bold, size: 12))
                         }
-                        .foregroundStyle(Color.coral)
+                        .foregroundStyle(Color.ink)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(Color.creamSoft, in: .capsule)
                         .overlay(Capsule().stroke(Color.stoneLight, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
-
-                    if model.exifLocation != nil {
-                        Button { Task { await model.usePinFromExif() } } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "photo.fill")
-                                    .font(.system(size: 11, weight: .semibold))
-                                Text(String(localized: "use photo location"))
-                                    .font(.Brand.jakarta(.bold, size: 12))
-                            }
-                            .foregroundStyle(Color.ink)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Color.creamSoft, in: .capsule)
-                            .overlay(Capsule().stroke(Color.stoneLight, lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    Spacer(minLength: 0)
                 }
+
+                Spacer(minLength: 0)
             }
         }
     }
@@ -414,9 +424,12 @@ struct SubmitView: View {
                     .foregroundStyle(Color.creamSoft)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
-                    .background(Color.coral, in: .rect(cornerRadius: 14))
+                    .background(
+                        model.canSubmit ? Color.coral : Color.stoneLight,
+                        in: .rect(cornerRadius: 14)
+                    )
             }
-            .disabled(model.stage == .submitting)
+            .disabled(model.stage == .submitting || !model.canSubmit)
             .padding(.horizontal, 16)
             .padding(.top, 10)
             .padding(.bottom, 12)
@@ -426,6 +439,9 @@ struct SubmitView: View {
 
     private var submitButtonLabel: String {
         if model.stage == .submitting { return String(localized: "submitting…") }
+        // Filing at the fallback pin would put the cat somewhere it has never
+        // been, with no in-app way to correct it. Say what's missing instead.
+        if !model.isLocationConfirmed { return String(localized: "set the spot first") }
         let trimmed = model.catName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
             // TODO: Use format string for v2: String(localized: "Pin %@ on the map  →", arguments: [trimmed])

@@ -7,17 +7,36 @@ import CoreLocation
 final class SubmitModel {
     enum Stage: Equatable {
         case pickingPhoto
-        case capturingLocation
         case editing
         case submitting
         case error(String)
         case done
     }
 
+    /// Shown under the map whenever we couldn't pin the user automatically.
+    /// Deliberately an instruction, not an apology — the map is right there.
+    static let manualPinNotice = String(
+        localized: "couldn't pin you automatically — drag the map to set the spot."
+    )
+
     var stage: Stage = .pickingPhoto
     var image: UIImage?
-    var location: CLLocation?
+    /// Non-optional so the editor's map always has something to render. Starts
+    /// on a fallback pin that is *not* submittable — `isLocationConfirmed`
+    /// gates that — so a photo can never be filed at a placeholder coordinate.
+    var location = CLLocation(
+        latitude: CLLocationCoordinate2D.fallback.latitude,
+        longitude: CLLocationCoordinate2D.fallback.longitude
+    )
     var locationLabel: String?
+    /// True once the pin means something: an EXIF coordinate, a device fix, or
+    /// a deliberate drag by the user. Submission is blocked until then.
+    var isLocationConfirmed = false
+    /// A device fix is in flight; the map shows a spinner but stays draggable.
+    var isResolvingLocation = false
+    /// Non-fatal location trouble. Never promoted to `.error`, because that
+    /// would take the map — the only way to recover — off screen.
+    var locationNotice: String?
     var catName: String = ""
     var tags: Set<String> = []
     /// When set, overrides `Date()` in the submit payload — used when an
@@ -37,17 +56,24 @@ final class SubmitModel {
     let prefilledCatId: UUID?
     private let locationManager = LocationManager()
     private var reverseGeocodeTask: Task<Void, Never>?
+    private var locationTask: Task<Void, Never>?
 
     init(prefilledCatId: UUID? = nil) {
         self.prefilledCatId = prefilledCatId
     }
 
+    /// Ready to file: a photo, and a pin the user or their device stands behind.
+    var canSubmit: Bool { image != nil && isLocationConfirmed }
+
     func acceptPhoto(_ image: UIImage) async {
         self.image = image
         isFromCameraRoll = false
         exifSeenAt = nil
-        stage = .capturingLocation
-        await captureLocation()
+        // Straight to the editor. The map lives there and is always visible,
+        // so a slow or failed fix refines a pin the user can already see and
+        // drag, rather than stranding them behind a spinner.
+        stage = .editing
+        refineLocationFromDevice()
     }
 
     /// Accepts a photo picked from the library. EXIF date + location are
@@ -56,27 +82,44 @@ final class SubmitModel {
         self.image = image
         isFromCameraRoll = true
         exifSeenAt = exif.creationDate
+        stage = .editing
 
         if let exifLoc = exif.location {
             exifLocation = exifLoc
             location = exifLoc
+            isLocationConfirmed = true
+            locationNotice = nil
             locationLabel = await locationManager.reverseGeocode(exifLoc)
-            stage = .editing
         } else {
-            stage = .capturingLocation
-            await captureLocation()
+            // PHPicker strips GPS from delivered image data unless the app
+            // holds full-library access, so this is the common path.
+            refineLocationFromDevice()
         }
     }
 
-    private func captureLocation() async {
-        do {
-            let loc = try await locationManager.requestOneShot()
-            deviceLocation = loc
-            location = loc
-            locationLabel = await locationManager.reverseGeocode(loc)
-            stage = .editing
-        } catch {
-            stage = .error(AppError.map(error).localizedDescription)
+    /// Ask the device where we are and move the pin there, unless the user has
+    /// already placed it themselves. Never fails loudly.
+    private func refineLocationFromDevice() {
+        locationTask?.cancel()
+        locationNotice = nil
+        isResolvingLocation = true
+
+        locationTask = Task { [weak self] in
+            guard let self else { return }
+            defer { self.isResolvingLocation = false }
+            do {
+                let loc = try await self.locationManager.requestOneShot()
+                if Task.isCancelled { return }
+                self.deviceLocation = loc
+                // Don't stomp a pin the user has already committed to.
+                guard !self.isLocationConfirmed else { return }
+                self.location = loc
+                self.isLocationConfirmed = true
+                self.locationLabel = await self.locationManager.reverseGeocode(loc)
+            } catch {
+                if Task.isCancelled { return }
+                self.locationNotice = Self.manualPinNotice
+            }
         }
     }
 
@@ -85,6 +128,9 @@ final class SubmitModel {
     func updatePin(to coordinate: CLLocationCoordinate2D) {
         let updated = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
         location = updated
+        // A deliberate drag is as good a confirmation as a device fix.
+        isLocationConfirmed = true
+        locationNotice = nil
         reverseGeocodeTask?.cancel()
         reverseGeocodeTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 350_000_000)
@@ -97,14 +143,25 @@ final class SubmitModel {
 
     /// Reset the pin to the user's current device location (one-shot).
     func usePinFromDeviceLocation() async {
+        isResolvingLocation = true
+        defer { isResolvingLocation = false }
         do {
             let loc = try await locationManager.requestOneShot()
             deviceLocation = loc
             location = loc
+            isLocationConfirmed = true
+            locationNotice = nil
             locationLabel = await locationManager.reverseGeocode(loc)
         } catch {
-            // Silent failure — user can pan manually.
+            locationNotice = Self.manualPinNotice
         }
+    }
+
+    /// Recentre handler for `MapPinPicker`, which drives its own camera from
+    /// the returned coordinate.
+    func recentreOnDevice() async -> CLLocationCoordinate2D? {
+        await usePinFromDeviceLocation()
+        return isLocationConfirmed ? location.coordinate : nil
     }
 
     /// Reset the pin back to the photo's original EXIF location, when one
@@ -112,6 +169,8 @@ final class SubmitModel {
     func usePinFromExif() async {
         guard let exifLoc = exifLocation else { return }
         location = exifLoc
+        isLocationConfirmed = true
+        locationNotice = nil
         locationLabel = await locationManager.reverseGeocode(exifLoc)
     }
 
@@ -121,14 +180,21 @@ final class SubmitModel {
 
     func submit() async {
         switch stage {
-        case .pickingPhoto, .capturingLocation, .submitting, .done:
+        case .pickingPhoto, .submitting, .done:
             return
         case .editing, .error:
             break
         }
 
-        guard let image, let location else {
-            stage = .error("missing photo or location")
+        guard let image else {
+            stage = .error(String(localized: "missing photo"))
+            return
+        }
+
+        // Surface the nudge next to the map rather than tearing down the
+        // editor — the fix is one drag away.
+        guard isLocationConfirmed else {
+            locationNotice = Self.manualPinNotice
             return
         }
 
