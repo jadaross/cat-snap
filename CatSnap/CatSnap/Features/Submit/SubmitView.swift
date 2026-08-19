@@ -7,7 +7,7 @@ struct SubmitView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model: SubmitModel
     @State private var pickedItem: PhotosPickerItem?
-    @State private var showCamera = false
+    @State private var camera = CameraController()
 
     init(prefilledCatId: UUID? = nil) {
         _model = State(initialValue: SubmitModel(prefilledCatId: prefilledCatId))
@@ -71,46 +71,96 @@ struct SubmitView: View {
 
     // MARK: - Photo source
 
+    // The live viewfinder. This was a dark gradient standing in for a camera,
+    // with the shutter merely presenting UIImagePickerController — so the real
+    // camera only appeared once the user believed they'd already taken the
+    // photo. The session now runs behind the same branded chrome, and the
+    // gradient survives as the backdrop for the states with nothing to show.
+    // Source: `CatSnap App.html` lines 401–457.
     private var photoSourceView: some View {
         ZStack {
-            // Dark viewfinder placeholder. We don't run an AV preview in v1 —
-            // tap-shutter hands off to UIImagePickerController which surfaces
-            // the live camera UI. Source: `CatSnap App.html` lines 401–457.
-            LinearGradient(
-                colors: [
-                    Color(red: 0.29, green: 0.26, blue: 0.23),
-                    Color(red: 0.16, green: 0.14, blue: 0.13),
-                    Color(red: 0.08, green: 0.07, blue: 0.05)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            if camera.status == .running {
+                CameraPreview(session: camera.session)
+                    .ignoresSafeArea()
+            } else {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.29, green: 0.26, blue: 0.23),
+                        Color(red: 0.16, green: 0.14, blue: 0.13),
+                        Color(red: 0.08, green: 0.07, blue: 0.05)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-            RadialGradient(
-                colors: [Color.coralDeep.opacity(0.25), .clear],
-                center: UnitPoint(x: 0.52, y: 0.58),
-                startRadius: 0,
-                endRadius: 350
-            )
-            .ignoresSafeArea()
+                RadialGradient(
+                    colors: [Color.coralDeep.opacity(0.25), .clear],
+                    center: UnitPoint(x: 0.52, y: 0.58),
+                    startRadius: 0,
+                    endRadius: 350
+                )
+                .ignoresSafeArea()
+            }
 
             VStack(spacing: 0) {
                 cameraTopBar
                 Spacer()
-                modeSelector
-                    .padding(.bottom, 24)
+                cameraFallbackNotice
                 captureRow
                     .padding(.horizontal, 36)
                     .padding(.bottom, 36)
             }
         }
         .preferredColorScheme(.dark)
-        .fullScreenCover(isPresented: $showCamera) {
-            CameraPicker { image in
-                Task { await model.acceptPhoto(image) }
+        // Scoped to this view only — a viewfinder is the one dark surface the
+        // light-only brand allows.
+        .task { await camera.start() }
+        .onDisappear { camera.stop() }
+        .onChange(of: model.stage) { _, stage in
+            // Don't leave the session burning battery behind the editor.
+            if stage != .pickingPhoto { camera.stop() }
+        }
+    }
+
+    /// Explains a viewfinder that isn't running. Replaces the old silent
+    /// no-op, where a tap on the shutter with no camera present did nothing
+    /// at all and said nothing about why.
+    @ViewBuilder
+    private var cameraFallbackNotice: some View {
+        switch camera.status {
+        case .running, .idle:
+            EmptyView()
+        case .unavailable:
+            VStack(spacing: 6) {
+                Text(String(localized: "no camera on this device"))
+                    .font(.Brand.jakarta(.bold, size: 15))
+                    .foregroundStyle(Color.creamSoft)
+                Text(String(localized: "upload a photo instead"))
+                    .font(.Brand.jakarta(.regular, size: 13))
+                    .foregroundStyle(Color.creamSoft.opacity(0.75))
             }
-            .ignoresSafeArea()
+            .padding(.bottom, 28)
+        case .denied:
+            VStack(spacing: 10) {
+                Text(String(localized: "camera access is off"))
+                    .font(.Brand.jakarta(.bold, size: 15))
+                    .foregroundStyle(Color.creamSoft)
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Text(String(localized: "open Settings"))
+                        .font(.Brand.jakarta(.bold, size: 13))
+                        .foregroundStyle(Color.ink)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color.creamSoft, in: .capsule)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.bottom, 28)
         }
     }
 
@@ -128,23 +178,6 @@ struct SubmitView: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
-    }
-
-    private var modeSelector: some View {
-        HStack(spacing: 18) {
-            modeLabel("VIDEO", isActive: false)
-            modeLabel("PHOTO", isActive: true)
-            modeLabel("BURST", isActive: false)
-        }
-    }
-
-    private func modeLabel(_ text: String, isActive: Bool) -> some View {
-        Text(text)
-            .font(.Brand.jakarta(.bold, size: 11))
-            .tracking(1.5)
-            .foregroundStyle(
-                isActive ? Color.streetlampYellow : Color.creamSoft.opacity(0.55)
-            )
     }
 
     private var captureRow: some View {
@@ -174,10 +207,11 @@ struct SubmitView: View {
 
             Spacer()
 
-            // SHUTTER — opens the live camera
+            // SHUTTER — captures from the live session
             Button {
-                if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                    showCamera = true
+                Task {
+                    guard let image = await camera.capture() else { return }
+                    await model.acceptPhoto(image)
                 }
             } label: {
                 VStack(spacing: 4) {
@@ -197,25 +231,33 @@ struct SubmitView: View {
                 }
             }
             .buttonStyle(.plain)
+            .disabled(camera.status != .running || camera.isCapturing)
+            .opacity(camera.status == .running ? 1 : 0.35)
 
             Spacer()
 
-            // FLIP — visual placeholder, native picker handles the active flip
-            VStack(spacing: 5) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.creamSoft.opacity(0.14))
-                        .frame(width: 48, height: 48)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color.creamSoft.opacity(0.55), lineWidth: 1.5)
-                        )
-                    Image(systemName: "arrow.triangle.2.circlepath.camera")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color.creamSoft)
+            // FLIP — real now that we own the session
+            Button { camera.flip() } label: {
+                VStack(spacing: 5) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.creamSoft.opacity(0.14))
+                            .frame(width: 48, height: 48)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(Color.creamSoft.opacity(0.55), lineWidth: 1.5)
+                            )
+                        Image(systemName: "arrow.triangle.2.circlepath.camera")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.creamSoft)
+                    }
+                    Color.clear.frame(height: 12) // align with UPLOAD label
                 }
-                Color.clear.frame(height: 12) // align with UPLOAD label
             }
+            .buttonStyle(.plain)
+            .disabled(!camera.canFlip || camera.status != .running)
+            .opacity(camera.canFlip && camera.status == .running ? 1 : 0.35)
+            .accessibilityLabel(String(localized: "flip camera"))
         }
     }
 
@@ -563,37 +605,5 @@ private struct SpottedPulseModifier: ViewModifier {
                     opacity = 0
                 }
             }
-    }
-}
-
-// MARK: - Camera wrapper
-
-private struct CameraPicker: UIViewControllerRepresentable {
-    let onPick: (UIImage) -> Void
-
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = .camera
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
-
-    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: CameraPicker
-        init(parent: CameraPicker) { self.parent = parent }
-
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            if let image = info[.originalImage] as? UIImage {
-                parent.onPick(image)
-            }
-            picker.dismiss(animated: true)
-        }
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            picker.dismiss(animated: true)
-        }
     }
 }
