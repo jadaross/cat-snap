@@ -1,8 +1,15 @@
 # Security Audit Report
 
-**Date**: August 18, 2026  
-**Project**: CatSnap iOS App  
+**Date**: August 18, 2026
+**Re-verified**: 19 August 2026 — scans re-run against a tree that compiles.
+**Project**: CatSnap iOS App
 **Audit Type**: Snyk Automated Scans + Manual Review
+
+> Unlike the Swift audit, the findings in this report held up. The 18 August
+> scans ran over source files, which Snyk analyses statically, so the fact
+> that the project did not link at the time did not invalidate them. Both
+> scans were re-run on 19 August against the fixed tree and the new test
+> target, and both still report 0 issues.
 
 ## Snyk Automated Scan Results
 

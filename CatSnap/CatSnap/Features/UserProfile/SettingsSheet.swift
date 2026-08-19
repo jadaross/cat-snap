@@ -12,16 +12,14 @@ struct SettingsSheet: View {
     @State private var showDeleteConfirm = false
     @State private var deleteError: String?
 
-    // Privacy policy and terms hosted on GitHub Pages
+    // Privacy policy and terms are hosted on GitHub Pages. Both are static
+    // literals, so the optional initialiser can never fail — the previous
+    // `?? URL(string: "https://catsnap.app/privacy")!` fallback was
+    // unreachable, force-unwrapped, and pointed at a page that does not
+    // exist. `staticURL` keeps the single force-unwrap in one audited place.
     private let supportEmail = "support@catsnap.app"
-    private var privacyURL: URL {
-        URL(string: "https://jadaross.github.io/cat-snap/privacy-policy.html") 
-            ?? URL(string: "https://catsnap.app/privacy")!
-    }
-    private var termsURL: URL {
-        URL(string: "https://jadaross.github.io/cat-snap/terms-of-service.html") 
-            ?? URL(string: "https://catsnap.app/terms")!
-    }
+    private let privacyURL = staticURL("https://jadaross.github.io/cat-snap/privacy-policy.html")
+    private let termsURL = staticURL("https://jadaross.github.io/cat-snap/terms-of-service.html")
 
     var body: some View {
         NavigationStack {
@@ -168,4 +166,13 @@ struct SettingsSheet: View {
             deleteError = AppError.map(error).localizedDescription
         }
     }
+}
+
+/// Builds a `URL` from a compile-time constant. Traps at launch — not in a
+/// user's hands — if a literal is ever edited into something invalid.
+private func staticURL(_ string: String) -> URL {
+    guard let url = URL(string: string) else {
+        preconditionFailure("Malformed static URL literal: \(string)")
+    }
+    return url
 }

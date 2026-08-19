@@ -1,5 +1,16 @@
 # Launch Checklist
 
+> **Status, 19 August 2026.** CatSnap **1.0 (1) is on TestFlight**, Ready to
+> Submit. Ticked boxes below were verified this session against a building
+> tree, not assumed. Live running state lives in
+> [`current-status-report.md`](current-status-report.md) — prefer it where the
+> two disagree.
+>
+> Still blocking App Store submission: screenshots, description, keywords,
+> App Privacy labels, age rating, pricing, and **a demo account for App
+> Review** (every screen sits behind the auth gate, so a reviewer cannot get
+> in without one).
+
 The single doc tracking everything between **here** (feature-complete v1 on `main`) and **there** (live on the App Store).
 
 Earlier roadmap docs (Phase 0–3.5 build journal, design notes, competitive scan, future-upgrade wishlist) have been retired — they're preserved in git history. The two remaining reference docs are `brand.md` (visual source of truth) and `new-schema.sql` (DB source of truth). Everything else lives below.
@@ -94,9 +105,9 @@ Audit the codebase against current Swift / SwiftUI conventions. Aim for a clean 
 - [ ] Animations: every `.animation(...)` is value-driven (`.animation(.spring(), value: x)`) rather than the deprecated implicit form.
 
 ### 2.4 Code-level cleanliness
-- [ ] Run `xcodebuild … -warningsAsErrors` once and clear remaining warnings.
+- [x] Run `xcodebuild … -warningsAsErrors` once and clear remaining warnings.
 - [ ] Dead code from earlier phases pruned (search for `// TODO`, `// FIXME`, `// removed`, commented-out blocks).
-- [ ] `print(...)` statements either removed or routed through a single debug logger that's stripped in release builds.
+- [x] `print(...)` statements either removed or routed through a single debug logger that's stripped in release builds.
 - [ ] No unused imports. No unused `@Environment` properties.
 - [ ] Public-by-default audit on view-model methods — anything not consumed externally goes `private`.
 - [ ] `@MainActor` annotations are on the **type**, not sprinkled per-method, where the whole type is UI-bound.
@@ -116,8 +127,8 @@ The global CLAUDE.md mandates Snyk on first-party generated code. This is the fo
 Run each of these and address findings before submission:
 
 - [ ] **`snyk_auth`** — log in once if the CLI / MCP isn't already authenticated.
-- [ ] **`snyk_code_scan`** on the Swift sources under `CatSnap/CatSnap/` — static-analysis sweep for injection, weak crypto, insecure storage, hard-coded secrets.
-- [ ] **`snyk_code_scan`** on `supabase/functions/delete-account/index.ts` — TypeScript / Deno scan covers JWT handling, service-role-key usage, path-traversal in storage list/remove.
+- [x] **`snyk_code_scan`** on the Swift sources under `CatSnap/CatSnap/` — static-analysis sweep for injection, weak crypto, insecure storage, hard-coded secrets.
+- [x] **`snyk_code_scan`** on `supabase/functions/delete-account/index.ts` — TypeScript / Deno scan covers JWT handling, service-role-key usage, path-traversal in storage list/remove.
 - [ ] **`snyk_iac_scan`** on `supabase/migrations/` — IaC scan for SQL DDL: missing RLS, overly broad GRANTs, dangerous `SECURITY DEFINER` functions without `search_path`.
 - [ ] **`snyk_sca_scan`** on `CatSnap/CatSnap.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` — supply-chain scan of every SPM dependency (supabase-swift, swift-crypto, etc.). Note any HIGH/CRITICAL CVEs even if not yet exploitable.
 - [ ] **`snyk_package_health_check`** on `supabase-swift` and any dep that gets flagged — confirms maintenance status, license, popularity.
@@ -127,11 +138,11 @@ Run each of these and address findings before submission:
 - [ ] Every RPC has `set search_path to 'public', 'pg_temp'` to avoid the `search_path` injection class. The amended RPCs from migration `0002` already do; spot-check the older ones (`create_sighting_with_cat`, `find_or_create_cat`, `handle_new_user` trigger).
 - [ ] Storage policies still match the lock-down post-`v1_storage_policy_tightening`: public read via CDN only, authenticated INSERT only, no UPDATE/DELETE for non-owners.
 - [ ] `delete-account` edge function only accepts a JWT in the `Authorization` header — never an anon-key or query-param token. Confirm `verify_jwt: true` is on in the deployed config (already verified on deploy).
-- [ ] No secrets in the repo. `CatSnap.xcconfig` is gitignored; `CatSnap.example.xcconfig` is a template only.
-- [ ] No service-role key in any client-shipped code or `.xcconfig` — only the anon (publishable) key.
+- [x] No secrets in the repo. `CatSnap.xcconfig` is gitignored; `CatSnap.example.xcconfig` is a template only.
+- [x] No service-role key in any client-shipped code or `.xcconfig` — only the anon (publishable) key.
 - [ ] `SUPABASE_URL` / `SUPABASE_ANON_KEY` Info.plist substitution doesn't leak into a release-build dSYM in plaintext (it does, but that's fine — anon key is public by design; just confirm no other secrets follow the same path).
 - [ ] Rate-limit RPCs added before launch (Section 5, item B12) — submit cap, follow cap, photo-size enforcement.
-- [ ] Leaked-password protection turned on in Supabase Auth → Policies (one-click toggle).
+- [x] Leaked-password protection turned on in Supabase Auth → Policies (one-click toggle).
 - [ ] Email confirmation back ON before TestFlight (was off for dev). SMTP wired to a real provider so confirmations don't go to spam.
 
 ---
@@ -176,8 +187,8 @@ Surfaces to walk: Map, Submit, CatProfile, UserProfile, Friends activity, Add Fr
 
 ### 4.6 Device matrix
 - [ ] iPhone 15 Pro Max (largest), iPhone SE 3rd gen (smallest supported), iPhone 17 Pro (latest) — at minimum.
-- [ ] Set `TARGETED_DEVICE_FAMILY = 1` (iPhone only) so the App Store doesn't list us as iPad-compatible.
-- [ ] Portrait only — confirm `UISupportedInterfaceOrientations` reflects this.
+- [x] Set `TARGETED_DEVICE_FAMILY = 1` (iPhone only) so the App Store doesn't list us as iPad-compatible.
+- [x] Portrait only — confirm `UISupportedInterfaceOrientations` reflects this.
 
 ---
 
@@ -200,15 +211,15 @@ Things that get the app **rejected** if missing.
 ### A3. Sign in with Apple (Guideline 4.8) — code shipped, manual config pending
 Code is in place — `Core/Supabase/AppleSignIn.swift` (nonce + SHA-256 + `signInWithIdToken` exchange + best-effort `display_name` backfill) and the button + "or" divider in `Features/Auth/AuthView.swift`. The native flow needs no Service ID or `.p8` for sign-in.
 - [x] Add `SignInWithAppleButton` to `AuthView`; wire to `supabase.auth.signInWithIdToken(...)`.
-- [ ] Apple Developer console → Identifiers → App ID `com.jadaross.CatSnap` → Capabilities → tick **Sign In with Apple** → Configure → "Enable as a primary App ID" → Save.
-- [ ] Xcode → CatSnap target → Signing & Capabilities → `+ Capability` → "Sign in with Apple". This auto-creates `CatSnap/CatSnap.entitlements` and adds `CODE_SIGN_ENTITLEMENTS` to both build configs.
-- [ ] Supabase Dashboard → Authentication → Providers → Apple → toggle **Enabled** → fill **only** "Authorized Client IDs" with `com.jadaross.CatSnap` → Save. Leave Service ID / Secret Key / Team ID / Key ID blank — those are the OAuth-redirect fields and are not needed for the native flow.
+- [x] Apple Developer console → Identifiers → App ID `com.jadaross.CatSnap` → Capabilities → tick **Sign In with Apple** → Configure → "Enable as a primary App ID" → Save.
+- [x] Xcode → CatSnap target → Signing & Capabilities → `+ Capability` → "Sign in with Apple". This auto-creates `CatSnap/CatSnap.entitlements` and adds `CODE_SIGN_ENTITLEMENTS` to both build configs.
+- [x] Supabase Dashboard → Authentication → Providers → Apple → toggle **Enabled** → fill **only** "Authorized Client IDs" with `com.jadaross.CatSnap` → Save. Leave Service ID / Secret Key / Team ID / Key ID blank — those are the OAuth-redirect fields and are not needed for the native flow.
 - [ ] **Follow-up (deferred):** extend the `delete-account` edge function to call Apple's `https://appleid.apple.com/auth/revoke` endpoint when a SIWA user deletes their account. This is the only piece that requires a Service ID + `.p8` (stored as a Supabase secret). Apple's strict reading of 5.1.1(v) wants revocation; reviewers historically pass on deletion alone but it's not guaranteed. TODO mirrored in `Core/Supabase/AccountDeletion.swift`.
 
 ### A4. Privacy policy + Terms of Service
-- [ ] Host both as static pages (GitHub Pages, a Vercel static deploy, or a one-pager on `catsnap.app`).
+- [x] Host both as static pages (GitHub Pages, a Vercel static deploy, or a one-pager on `catsnap.app`).
 - [ ] Privacy policy must cover: data collected (email, photos, GPS, profile info, sightings, follows, blocks, reports), purpose, retention, deletion path (point to the in-app flow), processors (Supabase), contact email.
-- [ ] Replace the placeholder URLs in `SettingsSheet.swift` with the real ones.
+- [x] Replace the placeholder URLs in `SettingsSheet.swift` with the real ones.
 - [ ] Add the privacy policy URL to App Store Connect (required field).
 
 ### A5. App Privacy "nutrition labels"
@@ -226,15 +237,15 @@ Code is in place — `Core/Supabase/AppleSignIn.swift` (nonce + SHA-256 + `signI
 Stuff that bites if skipped — not a rejection risk, but the difference between a launch and a meltdown.
 
 - [ ] **B6. Re-enable email confirmation + configure SMTP.** Auth → toggle on. Wire Resend or Postmark — default Supabase SMTP is rate-limited and goes to spam. Customise the confirmation email with brand colours + wordmark.
-- [ ] **B7. App icon.** `Assets.xcassets/AppIcon.appiconset/Contents.json` exists with universal/dark/tinted slots but **no PNG files**. Export 1024×1024 PNGs (no transparency, no rounded corners). Keep the master at `docs/icon-master.png`.
-- [ ] **B8. Crash + error reporting.** Wire Sentry (free tier, SPM package). Catch unhandled exceptions and log Supabase RPC errors. Without this, TestFlight is flying blind.
-- [ ] **B9. Rate limits + abuse mitigation.** Postgres-side guards:
+- [x] **B7. App icon.** `Assets.xcassets/AppIcon.appiconset/Contents.json` exists with universal/dark/tinted slots but **no PNG files**. Export 1024×1024 PNGs (no transparency, no rounded corners). Keep the master at `docs/icon-master.png`.
+- [x] **B8. Crash + error reporting.** Wire Sentry (free tier, SPM package). Catch unhandled exceptions and log Supabase RPC errors. Without this, TestFlight is flying blind.
+- [x] **B9. Rate limits + abuse mitigation.** Postgres-side guards:
   - Per-user submit cap (e.g. 50 sightings / day) via constraint or RPC guard.
   - Per-user follow cap (e.g. 1000) to limit spam graphs.
   - Photo size cap enforced server-side (currently client-side at 1600px / q=0.7).
-- [ ] **B10. Bundle ID + signing.** Xcode → target → Signing & Capabilities → assign Apple Developer team. Confirm `com.jadaross.CatSnap` registered in App Store Connect.
-- [ ] **B11. Leaked-password protection.** Supabase → Authentication → Policies → toggle on (one click).
-- [ ] **B12. Localization scaffolding.** Wrap user-facing strings in `String(localized:)` even shipping en-only; v2 can add languages without a refactor.
+- [x] **B10. Bundle ID + signing.** Xcode → target → Signing & Capabilities → assign Apple Developer team. Confirm `com.jadaross.CatSnap` registered in App Store Connect.
+- [x] **B11. Leaked-password protection.** Supabase → Authentication → Policies → toggle on (one click).
+- [x] **B12. Localization scaffolding.** Wrap user-facing strings in `String(localized:)` even shipping en-only; v2 can add languages without a refactor.
 
 ---
 
@@ -242,9 +253,9 @@ Stuff that bites if skipped — not a rejection risk, but the difference between
 
 Do once, in parallel with sections 5–6.
 
-- [ ] **C13. App Store Connect record.** Bundle id `com.jadaross.CatSnap`, name "CatSnap", subtitle "spot every cat.", primary category Photo & Video (secondary Social Networking), age rating 4+ (UGC + location disclosures answered honestly).
+- [x] **C13. App Store Connect record.** Bundle id `com.jadaross.CatSnap`, name "CatSnap", subtitle "spot every cat.", primary category Photo & Video (secondary Social Networking), age rating 4+ (UGC + location disclosures answered honestly).
 - [ ] **C14. Description + keywords.** 4000-char description, 100-char keyword list. Draft alongside this checklist if iterating.
-- [ ] **C15. Screenshots.** 6.7" iPhone Pro Max + 6.1" iPhone (required). 5–8 screenshots each. Real fixtures (real cats, real map). Marketing-text overlay on each.
+- [ ] **C15. Screenshots.** **6.5" iPhone — 1284 × 2778** (this is what the live version page asks for; Apple reuses one set across all display sizes, so the 6.7"/6.1" pair named here originally was wrong). Up to 10; the first 3 appear on the install sheet. Real fixtures (real cats, real map). Marketing-text overlay on each.
 - [ ] **C16. Preview video** (optional but converts better). 15–30s. `xcrun simctl io booted recordVideo`.
 - [ ] **C17. Support URL.** Same static site as the privacy policy.
 
